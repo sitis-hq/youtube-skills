@@ -1,0 +1,16 @@
+This repository includes material derived from the following projects, each under the MIT licence.
+Every derived file names its origin, the commit it was taken from and what was changed.
+
+youtube-agent-skill — https://github.com/Jakeschincariol/youtube-agent-skill
+  commit a2feb2104981a375ffd4f87ee04f4f5344ac43c6
+  Copyright (c) 2026 Jake Schincariol
+
+youtube-seo-skills — https://github.com/deeployCO/youtube-seo-skills
+  commit 779b0f130ad18c645730701d7884ef4ed0ec0d73
+  Copyright (c) 2026 Deeploy
+
+claude-youtube — https://github.com/AgriciDaniel/claude-youtube
+  commit 84c3fa6805200632fadb4fe2795ef265511271c7
+  Copyright (c) 2025 Daniel Agrici
+
+The MIT licence text of each is reproduced in licenses/.
