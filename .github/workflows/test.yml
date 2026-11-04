@@ -15,5 +15,5 @@ jobs:
           python-version: "3.11"
       # The same pins the platform shelf delivers to a run; a test that passes on other versions
       # proves nothing about the run.
-      - run: python -m pip install opencv-python-headless==4.14.0.94 numpy==2.2.6
+      - run: python -m pip install --only-binary :all: opencv-python-headless==4.14.0.94
       - run: python run_tests.py -v

@@ -16,7 +16,7 @@ python3 <base>/scripts/analyze_thumbnail.py <image> --out-dir <step artifact dir
     [--kind video|short] [--compare-dir <folder of competitor thumbnails>] [--no-faces]
 ```
 
-Needs `opencv-python-headless==4.14.0.94` and `numpy==2.2.6` attached to the step; without them the
+Needs `opencv-python-headless==4.14.0.94` attached (it brings numpy) to the step; without them the
 script refuses and names them. Any common image format is read (jpg, png, webp, gif, bmp, tiff, avif).
 
 | Output | Meaning |

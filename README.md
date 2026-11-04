@@ -43,7 +43,7 @@ finds it relative to its own file.
   non-zero with a reason.** The agent reads the output, so its shape is the script's interface.
 - **Python 3.11, standard library first.** YouTube's APIs are called over plain HTTPS, not through a
   client library. A third-party package is allowed only when the platform shelf carries it as a
-  pinned wheel: today `opencv-python-headless==4.14.0.94` and `numpy==2.2.6`
+  pinned wheel: today `opencv-python-headless==4.14.0.94`, which brings its own `numpy`
   (see [Dependencies](#dependencies)). Nothing here is installed by running code from this
   repository: there is no installer and there must not be one.
 - **No secrets in a script's arguments or files.** A token comes from
@@ -59,10 +59,10 @@ finds it relative to its own file.
 | Package | Pin | Needed by |
 | --- | --- | --- |
 | `opencv-python-headless` | `4.14.0.94` | `youtube-thumbnail-check`, `youtube-channel-setup` previews |
-| `numpy` | `2.2.6` | the same — the last numpy with a CPython 3.11 wheel |
+| `numpy` | resolved with opencv (2.4.6 on CPython 3.11) | the same — not attached on its own: the shelf installs a library with its dependencies, from wheels |
 | `yt-dlp` | shelf pin | `youtube-data` (transcripts, public thumbnails) |
 
-`opencv-python` 5.x ships without the Haar cascades, so face detection fails there silently; the
+`opencv-python` and `opencv-python-headless` 5.x ship without the Haar cascades and `CascadeClassifier`, so face detection cannot run there (checked in the 5.0.0.93 wheel, 2026-11-04); the
 non-headless build needs `libgl1`, which the worker image does not have.
 
 ## Tests

@@ -43,7 +43,7 @@ Brings the image to 800×800 (non-square refused without `--fit`), writes `avata
 size at real pixel size) and `avatar-<N>.png`. `detail.edges_outside_circle` is the share of detail
 in the corners the circle cuts off; `contrast_stddev_at_<N>px` near 0 means a flat dot when small.
 
-Both scripts need `opencv-python-headless==4.14.0.94` and `numpy==2.2.6` attached; without them they
+Both scripts need `opencv-python-headless==4.14.0.94` attached (it brings numpy); without them they
 refuse and name them. Output is JSON; exit 2 with `{"ok": false, "error": ...}` is a refusal.
 
 ## Approval
