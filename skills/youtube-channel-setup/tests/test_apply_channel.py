@@ -312,6 +312,21 @@ class Watermark(Base):
         self.assertEqual(out["units_used"], 51)
         self.assertEqual(self.intent_calls(), ["claim-intent", "commit-intent"])
 
+    def test_the_same_watermark_retimed_is_applied_again(self):
+        image = self.file("mark.png", png(300, 300))
+        self.run_cli(FakeApi(), "watermark", "--image", image, "--timing", "offsetFromStart",
+                     "--offset-ms", "0", *IDS)
+        same = FakeApi()
+        _, out = self.run_cli(same, "watermark", "--image", image, "--timing", "offsetFromStart",
+                              "--offset-ms", "0", *IDS)
+        self.assertFalse(out["acted"])
+        self.assertNotIn(("POST", "watermarks/set"), same.names())
+        retimed = FakeApi()
+        code, out = self.run_cli(retimed, "watermark", "--image", image, "--timing", "offsetFromEnd",
+                                 "--offset-ms", "15000", *IDS)
+        self.assertEqual(code, 0, out)
+        self.assertIn(("POST", "watermarks/set"), retimed.names())
+
     def test_timing_rules_and_image_limits_are_checked_before_any_call(self):
         cases = [(png(300, 300), ["--timing", "offsetFromEnd", "--offset-ms", "500"]),
                  (png(300, 300), ["--timing", "offsetFromEnd", "--offset-ms", "5000", "--duration-ms", "6000"]),

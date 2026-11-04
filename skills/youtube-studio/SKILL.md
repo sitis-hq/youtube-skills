@@ -39,7 +39,8 @@ Call the scripts by their path from this skill's base directory: `python3 <base>
 Verbs and their keys (`intent.py key --help`): `reply|pin|heart|hide|report --comment-id` →
 `<verb>:comment:<id>`; `post --date --title` → `post:community:<date>:<slug>`;
 `ab --video-id --date` → `ab:video:<id>:<date>`; `thumbnail --video-id --file` and
-`branding --part banner|avatar|watermark --file` → keyed by the image's content;
+`branding --part banner|avatar --file` → keyed by the image's content; `watermark --file --timing
+offsetFromEnd:15000[:5000]` → keyed by the image and its timing;
 `settings --area channel|upload-defaults|home-tab --state-file` and `metadata --video-id --state-file`
 → keyed by the desired state's canonical JSON. A key not built by `key` is refused.
 

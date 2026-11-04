@@ -15,7 +15,8 @@
       Key: branding:banner:<digest of the file>.
 
   apply_channel.py watermark --image mark.png --timing offsetFromEnd --offset-ms 15000 [--duration-ms N]
-      watermarks.set for the connection's own channel. Key: branding:watermark:<digest of the file>.
+      watermarks.set for the connection's own channel. Key: branding:watermark:<digest of the file
+      and the timing> — the same image with another timing is a new action.
 
 Not here: home sections and the profile picture — Studio playbooks in youtube-studio
 (references/home-tab.md, references/channel-profile.md).
@@ -421,7 +422,8 @@ def apply_banner(client: Client, ids_fn, image: str) -> dict[str, Any]:
 
 def apply_watermark(client: Client, ids_fn, image: str, timing: dict[str, Any]) -> dict[str, Any]:
     info = check_watermark(image)
-    key = intent.build_key("branding", part="watermark", file=image)
+    spec = f"{timing['type']}:{timing['offsetMs']}" + (f":{timing['durationMs']}" if "durationMs" in timing else "")
+    key = intent.build_key("watermark", file=image, timing=spec)
     ids = ids_fn()
     # A read, so before the claim: a refusal here changes nothing and needs no intent.
     page = client.call("channels.list", "GET", API + "channels", {"part": "id", "mine": "true"})

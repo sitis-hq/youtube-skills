@@ -102,6 +102,25 @@ class Keys(unittest.TestCase):
             self.assertEqual(k("banner.png"), k("banner-copy.png"))
             self.assertNotEqual(k("banner.png"), k("banner-v2.png"))
 
+    def test_a_watermark_is_keyed_by_its_image_and_its_timing(self):
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, "mark.png").write_bytes(b"mark")
+            Path(d, "mark-copy.png").write_bytes(b"mark")
+            k = lambda f, t: intent.build_key("watermark", file=str(Path(d, f)), timing=t)
+            self.assertEqual(k("mark.png", "offsetFromEnd:15000"), k("mark-copy.png", "offsetFromEnd:15000"))
+            # Retiming the same image is a new action; keyed by the image alone it was skipped as done.
+            self.assertNotEqual(k("mark.png", "offsetFromEnd:15000"), k("mark.png", "offsetFromStart:0"))
+            self.assertNotEqual(k("mark.png", "offsetFromEnd:15000"), k("mark.png", "offsetFromEnd:15000:5000"))
+            self.assertRegex(k("mark.png", "offsetFromStart:0"), r"^branding:watermark:[0-9a-f]{12}$")
+
+    def test_a_watermark_needs_a_timing_of_the_known_shape(self):
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, "mark.png").write_bytes(b"mark")
+            with self.assertRaises(intent.Refusal):
+                intent.build_key("watermark", file=str(Path(d, "mark.png")), timing="end")
+            with self.assertRaises(intent.Refusal):
+                intent.build_key("branding", part="watermark", file=str(Path(d, "mark.png")))
+
     def test_a_missing_part_names_its_flag(self):
         code, out = run("key", "ab", "--video-id", "dQw4w9WgXcQ", "--date", "2026-13-01")
         self.assertEqual(code, 2)

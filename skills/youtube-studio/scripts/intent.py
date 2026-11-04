@@ -67,6 +67,29 @@ def digest_file(path: str) -> str:
         raise Refusal(f"cannot read {path}: {e.strerror}") from None
 
 
+def _readable(path: str) -> str:
+    digest_file(path)  # refuses an unreadable file now, not inside the key's construction
+    return path
+
+
+TIMING = r"(offsetFromStart|offsetFromEnd):\d+(?::\d+)?"
+
+
+def _timing(value: str) -> str:
+    value = str(value).strip()
+    if not re.fullmatch(TIMING, value):
+        raise Refusal(f"timing must be <offsetFromStart|offsetFromEnd>:<offsetMs>[:<durationMs>], got {value!r}")
+    return value
+
+
+def digest_watermark(path: str, timing: str) -> str:
+    # The watermark is the image AND when it shows: the same image with another timing is a new
+    # action, and keyed by the image alone a retimed watermark would be skipped as already done.
+    with open(path, "rb") as fh:
+        data = fh.read()
+    return hashlib.sha256(data + b"\n" + timing.encode("utf-8")).hexdigest()[:12]
+
+
 def digest_state(path: str) -> str:
     # Canonical JSON, so key order and whitespace in the desired state do not make a new intention.
     # A file, because JSON on a command line loses its quotes in the shell layers of a run.
@@ -102,7 +125,7 @@ def _date(value: str) -> str:
 
 _comment = _check(COMMENT_ID, "comment id")
 _video = _check(VIDEO_ID, "video id (11 characters)")
-_part = _check("(banner|avatar|watermark)", "branding part (banner, avatar or watermark)")
+_part = _check("(banner|avatar)", "branding part (banner or avatar; a watermark is the watermark verb)")
 _area = _check("(channel|upload-defaults|home-tab)", "settings area (channel, upload-defaults or home-tab)")
 
 # Each verb: its parts (flag → parser), how the key is formed, and the pattern a stored key matches.
@@ -133,9 +156,13 @@ VERBS: dict[str, dict[str, Any]] = {
     "thumbnail": {"parts": {"video_id": _video, "file": digest_file}, "doc": "setting a video's thumbnail",
                   "make": lambda p: f"thumbnail:video:{p['video_id']}:{p['file']}",
                   "pattern": f"thumbnail:video:{VIDEO_ID}:{SHA}"},
-    "branding": {"parts": {"part": _part, "file": digest_file}, "doc": "uploading a banner, avatar or watermark",
+    "watermark": {"parts": {"file": _readable, "timing": _timing},
+                  "doc": "setting the channel watermark; timing = <offsetFromStart|offsetFromEnd>:<offsetMs>[:<durationMs>]",
+                  "make": lambda p: f"branding:watermark:{digest_watermark(p['file'], p['timing'])}",
+                  "pattern": f"branding:watermark:{SHA}"},
+    "branding": {"parts": {"part": _part, "file": digest_file}, "doc": "uploading a banner or an avatar",
                  "make": lambda p: f"branding:{p['part']}:{p['file']}",
-                 "pattern": f"branding:(banner|avatar|watermark):{SHA}"},
+                 "pattern": f"branding:(banner|avatar):{SHA}"},
     "settings": {"parts": {"area": _area, "state_file": digest_state},
                  "doc": "applying a desired state (JSON) to channel settings, upload defaults or the home tab",
                  "make": lambda p: f"settings:{p['area']}:{p['state_file']}",
@@ -282,7 +309,8 @@ def parser() -> argparse.ArgumentParser:
         for part in spec["parts"]:
             helps = {"file": "path of the image; its content forms the key",
                      "state_file": "a JSON file with the desired state; its canonical form forms the key",
-                     "title": "the post's topic in a few words"}
+                     "title": "the post's topic in a few words",
+                     "timing": "when it shows: offsetFromStart|offsetFromEnd:<offsetMs>[:<durationMs>]"}
             vp.add_argument("--" + part.replace("_", "-"), dest=part, required=True, help=helps.get(part))
 
     for name, help_text in (("claim", "claim before acting"), ("commit", "the action happened and was verified"),
