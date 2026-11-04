@@ -8,6 +8,11 @@ on:
 jobs:
   unit:
     runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        # The shelf's current pin and the last 4.x: the scripts must work on both, so a raise of
+        # the shelf entry is never what breaks a run.
+        opencv: ["5.0.0.93", "4.14.0.94"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -15,5 +20,5 @@ jobs:
           python-version: "3.11"
       # The same pins the platform shelf delivers to a run; a test that passes on other versions
       # proves nothing about the run.
-      - run: python -m pip install --only-binary :all: opencv-python-headless==4.14.0.94
+      - run: python -m pip install --only-binary :all: opencv-python-headless==${{ matrix.opencv }}
       - run: python run_tests.py -v

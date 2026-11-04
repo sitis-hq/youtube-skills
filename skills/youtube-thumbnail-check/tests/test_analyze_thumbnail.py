@@ -43,24 +43,37 @@ class Base(unittest.TestCase):
 
 
 class FaceDetection(Base):
-    def test_this_opencv_build_can_detect_faces(self):
-        # The pin is chosen for this: opencv 5.x has neither the cascades nor CascadeClassifier.
-        cascade = at.face_detector(cv2)
-        self.assertFalse(cascade.empty())
-        self.assertEqual(len(cascade.detectMultiScale(np.zeros((200, 200), np.uint8))), 0)
+    FACE = Path(__file__).resolve().parent / "fixtures" / "face-lincoln-1863.jpg"
 
-    def test_a_build_without_cascades_is_a_refusal_not_a_missing_field(self):
-        with mock.patch.object(cv2, "CascadeClassifier", side_effect=AttributeError("no CascadeClassifier")):
+    def test_a_real_face_is_found(self):
+        # A generated image cannot prove detection works; a count of 0 on every input would pass.
+        code, out = run(str(self.FACE), "--out-dir", str(self.out))
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["faces"]["count"], 1)
+        self.assertGreater(out["faces"]["largest_pct"], 5)
+
+    def test_a_face_is_found_after_scaling_a_large_image_down(self):
+        big = cv2.resize(cv2.imread(str(self.FACE)), None, fx=10, fy=10, interpolation=cv2.INTER_CUBIC)
+        code, out = run(str(self.save("big.png", big)), "--out-dir", str(self.out))
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["faces"]["count"], 1)
+        x, y, w, h = out["faces"]["boxes_xywh"][0]
+        self.assertGreater(w, 400)  # boxes are reported in the original image's pixels
+
+    def test_a_build_without_face_detector_is_a_refusal_not_a_missing_field(self):
+        with mock.patch.object(at, "FACE_MODEL", self.tmp / "absent.onnx"):
             code, out = run(str(self.save("t.png", thumb())), "--out-dir", str(self.out))
         self.assertEqual(code, 2)
         self.assertFalse(out["ok"])
         self.assertIn("--no-faces", out["error"])
 
-    def test_an_empty_cascade_is_a_refusal(self):
-        with mock.patch.object(cv2.data, "haarcascades", str(self.tmp) + "/"):
+    def test_a_model_that_is_not_the_expected_file_is_a_refusal(self):
+        fake = self.tmp / "pointer.onnx"
+        fake.write_text("version https://git-lfs.github.com/spec/v1\n")
+        with mock.patch.object(at, "FACE_MODEL", fake):
             code, out = run(str(self.save("t.png", thumb())), "--out-dir", str(self.out))
         self.assertEqual(code, 2)
-        self.assertIn("did not load", out["error"])
+        self.assertIn("digest", out["error"])
 
     def test_no_faces_flag_reports_null_explicitly(self):
         code, out = run(str(self.save("t.png", thumb())), "--out-dir", str(self.out), "--no-faces")
@@ -140,7 +153,7 @@ class Refusals(Base):
         with mock.patch.dict(sys.modules, {"cv2": None}):
             code, out = run(str(self.tmp / "x.png"), "--out-dir", str(self.out))
         self.assertEqual(code, 2)
-        self.assertIn("opencv-python-headless==4.14.0.94", out["error"])
+        self.assertIn("opencv-python-headless", out["error"])
 
 
 class Compare(Base):

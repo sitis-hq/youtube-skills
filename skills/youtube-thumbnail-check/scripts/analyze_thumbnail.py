@@ -8,12 +8,14 @@
 #     (colour histograms and a coarse layout correlation), without a verdict threshold;
 #   - previews go to --out-dir, named after the input, instead of a fixed /tmp directory;
 #   - images are decoded from bytes, so .webp, .JPG, .avif, non-ASCII paths and the like are read;
+#   - faces are found by YuNet (cv2.FaceDetectorYN with the model in ../models), not the Haar
+#     cascade: opencv 5.x dropped the cascades, and YuNet also finds turned and smaller faces;
 #   - face detection that cannot run is a refusal (exit 2), not a silently missing field;
 #   - the MSER count is reported as mser_region_count, not as a text or word estimate;
 #   - checks follow YouTube's current thumbnail specification; every argument has help text;
 #   - k-means is seeded, so the same image gives the same colours.
 """Measure a YouTube thumbnail: size and format against the specification, luminance and
-contrast, dominant colours, frontal faces, MSER region count, and small-size previews to look at.
+contrast, dominant colours, faces, MSER region count, and small-size previews to look at.
 
 Prints JSON on stdout. A refusal (unreadable image, face detection unavailable, opencv missing)
 exits 2 with {"ok": false, "error": ...}.
@@ -22,13 +24,21 @@ exits 2 with {"ok": false, "error": ...}.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
 
-ATTACH_HINT = (
-    "attach opencv-python-headless==4.14.0.94 and numpy==2.2.6 from the shelf to this step"
-)
+ATTACH_HINT = "attach opencv-python-headless (4.8 or later, 5.x included) from the shelf to this step"
+
+# YuNet, from opencv_zoo models/face_detection_yunet (commit f12e127, 2023-06-06), MIT licence in
+# licenses/opencv-zoo-yunet.txt. The digest guards against a truncated copy or a git-LFS pointer
+# file standing in for the model: either would load as garbage or not at all.
+FACE_MODEL = Path(__file__).resolve().parents[1] / "models" / "face_detection_yunet_2023mar.onnx"
+FACE_MODEL_SHA256 = "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4"
+# YuNet is trained on small inputs; a 4K thumbnail is scaled down first, which keeps it fast and
+# loses nothing a viewer would see in a feed.
+FACE_INPUT_MAX_SIDE = 1280
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tif", ".tiff", ".avif"}
 
 # YouTube Help "Add video thumbnails" (support.google.com/youtube/answer/72431), read 2026-11-04:
@@ -94,37 +104,51 @@ def read_image(cv2, np, path: Path):
 
 
 def face_detector(cv2):
-    """The Haar cascade ships with opencv-python(-headless) 4.x; 5.x dropped both the XML files
-    and CascadeClassifier. A detector that cannot load is a refusal, never a missing field."""
-    try:
-        path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-        cascade = cv2.CascadeClassifier(path)
-    except AttributeError as exc:
-        raise Refusal(f"this opencv build has no Haar face detector ({exc}); {ATTACH_HINT}, "
-                      "or pass --no-faces to measure without faces") from exc
-    if cascade.empty():
-        raise Refusal(f"the Haar face cascade did not load from {path}; {ATTACH_HINT}, "
+    """YuNet through cv2.FaceDetectorYN — in opencv-python(-headless) 4.8+ and 5.x alike. A detector
+    that cannot load is a refusal, never a missing field."""
+    if not hasattr(cv2, "FaceDetectorYN"):
+        raise Refusal(f"this opencv build ({cv2.__version__}) has no FaceDetectorYN; {ATTACH_HINT}, "
                       "or pass --no-faces to measure without faces")
-    return cascade
+    try:
+        data = FACE_MODEL.read_bytes()
+    except OSError as exc:
+        raise Refusal(f"the face model is missing at {FACE_MODEL} ({exc.strerror}); "
+                      "or pass --no-faces to measure without faces") from exc
+    if hashlib.sha256(data).hexdigest() != FACE_MODEL_SHA256:
+        raise Refusal(f"the face model at {FACE_MODEL} is not the expected file (digest differs); "
+                      "or pass --no-faces to measure without faces")
+    try:
+        return cv2.FaceDetectorYN.create(str(FACE_MODEL), "", (320, 320), 0.6, 0.3, 50)
+    except cv2.error as exc:
+        raise Refusal(f"opencv {cv2.__version__} could not load the YuNet model ({exc}); "
+                      f"{ATTACH_HINT}, or pass --no-faces to measure without faces") from exc
 
 
-def detect_faces(cv2, cascade, gray):
-    h, w = gray.shape[:2]
+def detect_faces(cv2, detector, img):
+    h, w = img.shape[:2]
+    scale = min(1.0, FACE_INPUT_MAX_SIDE / max(h, w))
+    small = cv2.resize(img, (max(1, round(w * scale)), max(1, round(h * scale))),
+                       interpolation=cv2.INTER_AREA) if scale < 1.0 else img
+    detector.setInputSize((small.shape[1], small.shape[0]))
+    _, found = detector.detect(small)
     # Faces smaller than ~5 % of the short side vanish in a feed row, so they are not counted.
-    side = max(24, int(min(h, w) * 0.05))
-    boxes = cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(side, side))
-    boxes = [tuple(int(v) for v in b) for b in (boxes if len(boxes) else [])]
-    boxes.sort(key=lambda b: b[2] * b[3], reverse=True)
-    area = sum(bw * bh for (_, _, bw, bh) in boxes)
+    side = max(12, int(min(h, w) * 0.05))
+    faces = []
+    for row in (found if found is not None else []):
+        x, y, bw, bh = (int(round(v / scale)) for v in row[:4])
+        if min(bw, bh) >= side:
+            faces.append({"box": [x, y, bw, bh], "score": round(float(row[14]), 3)})
+    faces.sort(key=lambda f: f["box"][2] * f["box"][3], reverse=True)
+    area = sum(f["box"][2] * f["box"][3] for f in faces)
     return {
-        "detector": "opencv haarcascade_frontalface_default",
-        "count": len(boxes),
+        "detector": "YuNet (opencv FaceDetectorYN, face_detection_yunet_2023mar), score >= 0.6",
+        "count": len(faces),
         "area_pct": round(area / (w * h) * 100, 2),
-        "largest_pct": round(boxes[0][2] * boxes[0][3] / (w * h) * 100, 2) if boxes else 0.0,
-        "boxes_xywh": [list(b) for b in boxes],
-        "note": "frontal, photographic faces only; turned, stylised, drawn and small faces are "
-                "missed, and textures can give false positives — look at the image before "
-                "relying on count 0",
+        "largest_pct": round(faces[0]["box"][2] * faces[0]["box"][3] / (w * h) * 100, 2) if faces else 0.0,
+        "boxes_xywh": [f["box"] for f in faces],
+        "scores": [f["score"] for f in faces],
+        "note": "photographic faces, frontal and turned; drawn and heavily stylised faces can be "
+                "missed — look at the image before relying on count 0",
     }
 
 
@@ -220,7 +244,7 @@ def compare(cv2, np, img, target: Path, folder: Path):
 def analyze(path: Path, out_dir: Path, kind: str = "video", faces: bool = True,
             compare_dir: Path | None = None) -> dict:
     cv2, np = load_cv()
-    cascade = face_detector(cv2) if faces else None
+    detector = face_detector(cv2) if faces else None
     img, fmt, size = read_image(cv2, np, path)
     h, w = img.shape[:2]
     spec = SPEC[kind]
@@ -254,7 +278,7 @@ def analyze(path: Path, out_dir: Path, kind: str = "video", faces: bool = True,
             "scale": "0-255",
         },
         "dominant_colors": dominant_colours(cv2, np, img),
-        "faces": detect_faces(cv2, cascade, gray) if cascade is not None else None,
+        "faces": detect_faces(cv2, detector, img) if detector is not None else None,
         "mser_region_count": len(cv2.MSER_create().detectRegions(gray)[0]),
         "previews": write_previews(cv2, img, out_dir, path.stem, kind),
     }

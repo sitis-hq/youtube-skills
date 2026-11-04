@@ -13,4 +13,8 @@ claude-youtube — https://github.com/AgriciDaniel/claude-youtube
   commit 84c3fa6805200632fadb4fe2795ef265511271c7
   Copyright (c) 2025 Daniel Agrici
 
+YuNet face detection model — https://github.com/opencv/opencv_zoo, models/face_detection_yunet
+  face_detection_yunet_2023mar.onnx, commit f12e12798e8314f7c074a6656816c048dcc95b7a
+  Copyright (c) 2020 Shiqi Yu
+
 The MIT licence text of each is reproduced in licenses/.

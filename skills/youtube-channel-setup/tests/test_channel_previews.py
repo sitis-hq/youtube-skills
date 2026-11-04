@@ -165,7 +165,7 @@ class Shared(Base):
             with mock.patch.dict(sys.modules, {"cv2": None}):
                 code, out = run(module, str(self.tmp / "x.png"), "--out-dir", str(self.out))
             self.assertEqual(code, 2)
-            self.assertIn("opencv-python-headless==4.14.0.94", out["error"])
+            self.assertIn("opencv-python-headless", out["error"])
 
     def test_unreadable_input_is_a_refusal(self):
         p = self.tmp / "x.png"

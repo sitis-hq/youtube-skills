@@ -16,7 +16,7 @@ python3 <base>/scripts/analyze_thumbnail.py <image> --out-dir <step artifact dir
     [--kind video|short] [--compare-dir <folder of competitor thumbnails>] [--no-faces]
 ```
 
-Needs `opencv-python-headless==4.14.0.94` attached (it brings numpy) to the step; without them the
+Needs `opencv-python-headless` (4.8+ or 5.x) attached (it brings numpy) to the step; without them the
 script refuses and names them. Any common image format is read (jpg, png, webp, gif, bmp, tiff, avif).
 
 | Output | Meaning |
@@ -24,7 +24,7 @@ script refuses and names them. Any common image format is read (jpg, png, webp, 
 | `spec.*` | against YouTube's current spec (Help 72431, read 2026-11-04): 16:9 (9:16 for Shorts), JPG or PNG, at least 640 px, 3840×2160 recommended, ≤ 2 MB from the phone app, ≤ 50 MB from desktop and `thumbnails.set` |
 | `luminance.contrast_stddev` | standard deviation of luminance 0–255, full size and at 168 px wide. Use it to compare variants of one design, not as an absolute grade |
 | `dominant_colors` | three k-means colours with their share of the frame |
-| `faces` | frontal photographic faces (Haar): count, `area_pct`, boxes. It misses turned, drawn and stylised faces — typical of generated art — so `count: 0` means "look", not "no face" |
+| `faces` | photographic faces, frontal and turned (YuNet): count, `area_pct`, boxes, scores. Drawn and heavily stylised faces — common in generated art — can be missed, so `count: 0` means "look", not "no face" |
 | `mser_region_count` | number of MSER blobs. It grows with any fine detail: a busy background gives hundreds. **It is not a count of words or of text** |
 | `previews` | PNGs at 120, 168, 246 and 480 px wide, with the duration stamp drawn bottom-right. **Open them and look** — this is the legibility test |
 | `compare` | colour-histogram and coarse-layout correlation (-1..1) with each image of `--compare-dir`, mean and top 3. Ranking only: there is no calibrated "too similar" threshold |

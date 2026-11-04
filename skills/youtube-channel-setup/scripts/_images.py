@@ -10,7 +10,7 @@ import json
 import sys
 from pathlib import Path
 
-ATTACH_HINT = "attach opencv-python-headless==4.14.0.94 and numpy==2.2.6 from the shelf to this step"
+ATTACH_HINT = "attach opencv-python-headless (4.8 or later, 5.x included) from the shelf to this step"
 
 
 class Refusal(Exception):
