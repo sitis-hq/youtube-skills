@@ -1,0 +1,150 @@
+{
+ "version": "0.1.20261101",
+ "status_code": 20000,
+ "status_message": "Ok.",
+ "time": "0.5 sec.",
+ "cost": 0.01224,
+ "tasks_count": 1,
+ "tasks_error": 0,
+ "tasks": [
+  {
+   "id": "11041948-1535-0216-0000-000000000001",
+   "status_code": 20000,
+   "status_message": "Ok.",
+   "time": "0.4 sec.",
+   "cost": 0.01224,
+   "result_count": 1,
+   "path": [
+    "v3",
+    "dataforseo_labs",
+    "google",
+    "related_keywords",
+    "live"
+   ],
+   "data": {
+    "api": "dataforseo_labs",
+    "function": "related_keywords",
+    "keyword": "lofi beats",
+    "depth": 1,
+    "location_code": 2840,
+    "language_code": "en"
+   },
+   "result": [
+    {
+     "se_type": "google",
+     "seed_keyword": "lofi beats",
+     "seed_keyword_data": null,
+     "location_code": 2840,
+     "language_code": "en",
+     "total_count": 2,
+     "items_count": 2,
+     "items": [
+      {
+       "se_type": "google",
+       "keyword_data": {
+        "se_type": "google",
+        "keyword": "lofi beats to study",
+        "location_code": 2840,
+        "language_code": "en",
+        "keyword_info": {
+         "se_type": "google",
+         "last_updated_time": "2026-10-15 03:12:45 +00:00",
+         "competition": 0.12,
+         "competition_level": "LOW",
+         "cpc": 0.35,
+         "search_volume": 8100,
+         "low_top_of_page_bid": 0.1,
+         "high_top_of_page_bid": 0.9,
+         "categories": [
+          10021
+         ],
+         "monthly_searches": [
+          {
+           "year": 2026,
+           "month": 9,
+           "search_volume": 8100
+          }
+         ],
+         "search_volume_trend": {
+          "monthly": 0,
+          "quarterly": 10,
+          "yearly": -5
+         }
+        },
+        "keyword_properties": {
+         "se_type": "google",
+         "core_keyword": null,
+         "synonym_clustering_algorithm": null,
+         "keyword_difficulty": 22,
+         "detected_language": "en",
+         "is_another_language": false
+        },
+        "search_intent_info": {
+         "se_type": "google",
+         "main_intent": "informational",
+         "foreign_intent": null,
+         "last_updated_time": "2026-10-01 00:00:00 +00:00"
+        }
+       },
+       "depth": 1,
+       "related_keywords": [
+        "lofi study",
+        "study music"
+       ]
+      },
+      {
+       "se_type": "google",
+       "keyword_data": {
+        "se_type": "google",
+        "keyword": "Lofi  Beats",
+        "location_code": 2840,
+        "language_code": "en",
+        "keyword_info": {
+         "se_type": "google",
+         "last_updated_time": "2026-10-15 03:12:45 +00:00",
+         "competition": 0.12,
+         "competition_level": "LOW",
+         "cpc": 0.21,
+         "search_volume": 14800,
+         "low_top_of_page_bid": 0.1,
+         "high_top_of_page_bid": 0.9,
+         "categories": [
+          10021
+         ],
+         "monthly_searches": [
+          {
+           "year": 2026,
+           "month": 9,
+           "search_volume": 14800
+          }
+         ],
+         "search_volume_trend": {
+          "monthly": 0,
+          "quarterly": 10,
+          "yearly": -5
+         }
+        },
+        "keyword_properties": {
+         "se_type": "google",
+         "core_keyword": null,
+         "synonym_clustering_algorithm": null,
+         "keyword_difficulty": 140,
+         "detected_language": "en",
+         "is_another_language": false
+        },
+        "search_intent_info": {
+         "se_type": "google",
+         "main_intent": "weird",
+         "foreign_intent": null,
+         "last_updated_time": "2026-10-01 00:00:00 +00:00"
+        }
+       },
+       "depth": 0,
+       "related_keywords": []
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

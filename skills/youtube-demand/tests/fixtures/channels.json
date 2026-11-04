@@ -1,0 +1,17 @@
+{
+ "ok": true,
+ "channels": [
+  {
+   "channel_id": "UCaaaaaaaaaaaaaaaaaaaaaa",
+   "subscribers": 1000000
+  },
+  {
+   "channel_id": "UCbbbbbbbbbbbbbbbbbbbbbb",
+   "subscribers": 10000
+  },
+  {
+   "channel_id": "UCcccccccccccccccccccccc",
+   "subscribers": null
+  }
+ ]
+}

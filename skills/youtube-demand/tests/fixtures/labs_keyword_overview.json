@@ -1,0 +1,187 @@
+{
+ "version": "0.1.20261101",
+ "status_code": 20000,
+ "status_message": "Ok.",
+ "time": "0.5 sec.",
+ "cost": 0.01236,
+ "tasks_count": 1,
+ "tasks_error": 0,
+ "tasks": [
+  {
+   "id": "11041948-1535-0216-0000-000000000001",
+   "status_code": 20000,
+   "status_message": "Ok.",
+   "time": "0.4 sec.",
+   "cost": 0.01236,
+   "result_count": 1,
+   "path": [
+    "v3",
+    "dataforseo_labs",
+    "google",
+    "keyword_overview",
+    "live"
+   ],
+   "data": {
+    "api": "dataforseo_labs",
+    "function": "keyword_overview",
+    "se": "google",
+    "keywords": [
+     "sad phonk",
+     "phonk music",
+     "phonk drift"
+    ],
+    "location_code": 2840,
+    "language_code": "en"
+   },
+   "result": [
+    {
+     "se_type": "google",
+     "location_code": 2840,
+     "language_code": "en",
+     "items_count": 3,
+     "items": [
+      {
+       "se_type": "google",
+       "keyword": "sad phonk",
+       "location_code": 2840,
+       "language_code": "en",
+       "search_partners": false,
+       "keyword_info": {
+        "se_type": "google",
+        "last_updated_time": "2026-10-15 03:12:45 +00:00",
+        "competition": 0.12,
+        "competition_level": "LOW",
+        "cpc": 0.42,
+        "search_volume": 1900,
+        "low_top_of_page_bid": 0.1,
+        "high_top_of_page_bid": 0.9,
+        "categories": [
+         10021
+        ],
+        "monthly_searches": [
+         {
+          "year": 2026,
+          "month": 9,
+          "search_volume": 1900
+         }
+        ],
+        "search_volume_trend": {
+         "monthly": 0,
+         "quarterly": 10,
+         "yearly": -5
+        }
+       },
+       "keyword_properties": {
+        "se_type": "google",
+        "core_keyword": null,
+        "synonym_clustering_algorithm": null,
+        "keyword_difficulty": 31,
+        "detected_language": "en",
+        "is_another_language": false
+       },
+       "serp_info": null,
+       "avg_backlinks_info": null,
+       "search_intent_info": {
+        "se_type": "google",
+        "main_intent": "informational",
+        "foreign_intent": null,
+        "last_updated_time": "2026-10-01 00:00:00 +00:00"
+       }
+      },
+      {
+       "se_type": "google",
+       "keyword": "phonk music",
+       "location_code": 2840,
+       "language_code": "en",
+       "search_partners": false,
+       "keyword_info": {
+        "se_type": "google",
+        "last_updated_time": "2026-10-15 03:12:45 +00:00",
+        "competition": 0.12,
+        "competition_level": "LOW",
+        "cpc": 0.18,
+        "search_volume": 40500,
+        "low_top_of_page_bid": 0.1,
+        "high_top_of_page_bid": 0.9,
+        "categories": [
+         10021
+        ],
+        "monthly_searches": [
+         {
+          "year": 2026,
+          "month": 9,
+          "search_volume": 40500
+         }
+        ],
+        "search_volume_trend": {
+         "monthly": 0,
+         "quarterly": 10,
+         "yearly": -5
+        }
+       },
+       "keyword_properties": {
+        "se_type": "google",
+        "core_keyword": null,
+        "synonym_clustering_algorithm": null,
+        "keyword_difficulty": 58,
+        "detected_language": "en",
+        "is_another_language": false
+       },
+       "serp_info": null,
+       "avg_backlinks_info": null,
+       "search_intent_info": {
+        "se_type": "google",
+        "main_intent": "navigational",
+        "foreign_intent": null,
+        "last_updated_time": "2026-10-01 00:00:00 +00:00"
+       }
+      },
+      {
+       "se_type": "google",
+       "keyword": "phonk drift",
+       "location_code": 2840,
+       "language_code": "en",
+       "search_partners": false,
+       "keyword_info": {
+        "se_type": "google",
+        "last_updated_time": "2026-10-15 03:12:45 +00:00",
+        "competition": 0.12,
+        "competition_level": "LOW",
+        "cpc": null,
+        "search_volume": null,
+        "low_top_of_page_bid": 0.1,
+        "high_top_of_page_bid": 0.9,
+        "categories": [
+         10021
+        ],
+        "monthly_searches": [
+         {
+          "year": 2026,
+          "month": 9,
+          "search_volume": null
+         }
+        ],
+        "search_volume_trend": {
+         "monthly": 0,
+         "quarterly": 10,
+         "yearly": -5
+        }
+       },
+       "keyword_properties": {
+        "se_type": "google",
+        "core_keyword": null,
+        "synonym_clustering_algorithm": null,
+        "keyword_difficulty": null,
+        "detected_language": "en",
+        "is_another_language": false
+       },
+       "serp_info": null,
+       "avg_backlinks_info": null,
+       "search_intent_info": null
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

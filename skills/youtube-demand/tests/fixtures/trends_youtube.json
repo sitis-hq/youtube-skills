@@ -1,0 +1,129 @@
+{
+ "version": "0.1.20261101",
+ "status_code": 20000,
+ "status_message": "Ok.",
+ "time": "0.5 sec.",
+ "cost": 0.0027,
+ "tasks_count": 1,
+ "tasks_error": 0,
+ "tasks": [
+  {
+   "id": "11041948-1535-0216-0000-000000000001",
+   "status_code": 20000,
+   "status_message": "Ok.",
+   "time": "0.4 sec.",
+   "cost": 0.0027,
+   "result_count": 1,
+   "path": [
+    "v3",
+    "keywords_data",
+    "google_trends",
+    "explore",
+    "live"
+   ],
+   "data": {
+    "api": "keywords_data",
+    "function": "explore",
+    "se": "google_trends",
+    "keywords": [
+     "sad phonk",
+     "phonk drift"
+    ],
+    "type": "youtube",
+    "time_range": "past_12_months",
+    "location_code": 2840
+   },
+   "result": [
+    {
+     "keywords": [
+      "sad phonk",
+      "phonk drift"
+     ],
+     "type": "youtube",
+     "location_code": 2840,
+     "language_code": "en",
+     "check_url": "https://trends.google.com/trends/explore?...",
+     "datetime": "2026-11-04 10:00:00 +00:00",
+     "items_count": 2,
+     "items": [
+      {
+       "position": 1,
+       "type": "google_trends_graph",
+       "title": "Interest over time",
+       "keywords": [
+        "sad phonk",
+        "phonk drift"
+       ],
+       "data": [
+        {
+         "date_from": "2026-10-05",
+         "date_to": "2026-10-11",
+         "timestamp": 0,
+         "missing_data": false,
+         "values": [
+          40,
+          10
+         ]
+        },
+        {
+         "date_from": "2026-10-12",
+         "date_to": "2026-10-18",
+         "timestamp": 0,
+         "missing_data": false,
+         "values": [
+          60,
+          20
+         ]
+        },
+        {
+         "date_from": "2026-10-19",
+         "date_to": "2026-10-25",
+         "timestamp": 0,
+         "missing_data": true,
+         "values": [
+          0,
+          0
+         ]
+        },
+        {
+         "date_from": "2026-10-26",
+         "date_to": "2026-11-01",
+         "timestamp": 0,
+         "missing_data": false,
+         "values": [
+          100,
+          30
+         ]
+        }
+       ],
+       "averages": []
+      },
+      {
+       "position": 2,
+       "type": "google_trends_queries_list",
+       "title": "Related queries",
+       "keywords": [
+        "sad phonk",
+        "phonk drift"
+       ],
+       "data": {
+        "top": [
+         {
+          "query": "sad phonk playlist",
+          "value": 100
+         }
+        ],
+        "rising": [
+         {
+          "query": "sad phonk slowed",
+          "value": 250
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

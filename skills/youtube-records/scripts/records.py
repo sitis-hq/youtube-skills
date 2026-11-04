@@ -255,7 +255,8 @@ kind(Kind(
         "volume": opt(_int(0), "Google monthly search volume (web, not YouTube)"),
         "cpc": opt(_float(0), "cost per click, USD"),
         "kd_web": opt(_int(0, 100), "DataForSEO keyword difficulty, 0-100"),
-        "yt_interest": opt(_int(0, 100), "Google Trends YouTube-search interest, an index 0-100, not a count"),
+        "yt_interest": opt(_int(0, 100), "Google Trends YouTube-search interest, an index 0-100, not a "
+                                          "count; comparable only with terms of the same Trends request"),
         "yt_competition": opt(_float(0, 1), "competition in YouTube results, 0..1 (youtube-demand formula)"),
         "intent": opt(_enum("informational", "navigational", "commercial", "transactional"), "search intent"),
     },
@@ -334,7 +335,7 @@ kind(Kind(
         "format": req(FORMAT, "long, short, live or post"),
         "status": req(IDEA_STATUS, "new, shortlisted, planned, rejected, published"),
         "source": req(_text, "what grounded it: watch:<id>, trend, seed:<slug>, owner"),
-        "score": opt(_float(0), "the idea score of youtube-strategy"),
+        "score": opt(_float(0, 100), "0-100, from youtube-strategy's score_idea.py"),
         "note": opt(_text, "anything the next reader needs"),
     },
     make_key=lambda d: f"idea:{slugify(d['title'])}",
@@ -380,19 +381,20 @@ kind(Kind(
 
 kind(Kind(
     name="replied",
-    key_doc="replied:<commentId>",
+    key_doc="replied:<commentId>:<action>",
     writer="Community",
     readers="Community",
-    doc="A comment the channel has acted on, so a later run does not act twice.",
+    doc="An action the channel took on a comment, so a later run does not take it twice. One record "
+        "per action: a comment answered and then pinned has two, and neither overwrites the other.",
     fields={
         "comment_id": req(_comment, "the comment acted on"),
         "video_id": req(_video, "its video"),
-        "action": req(_enum("reply", "pin", "heart", "hide"), "what was done"),
+        "action": req(_enum("reply", "pin", "heart", "hide", "report"), "what was done"),
         "at": req(_datetime, "when"),
         "reply_id": opt(_comment, "the reply's own id, for action=reply"),
         "source": req(_text, "community"),
     },
-    make_key=lambda d: f"replied:{d['comment_id']}",
+    make_key=lambda d: f"replied:{d['comment_id']}:{d['action']}",
     checks=(_replied_reply_has_text,),
 ))
 

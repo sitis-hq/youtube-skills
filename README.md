@@ -41,8 +41,9 @@ finds it relative to its own file.
   longer be fetched leaves every copy pinned to it without its skills, silently.
 - **A script prints JSON on stdout and nothing else; diagnostics go to stderr; a refusal exits
   non-zero with a reason.** The agent reads the output, so its shape is the script's interface.
-- **Python 3.11, standard library first.** A third-party package is allowed only when the platform
-  shelf carries it as a pinned wheel: today `opencv-python-headless==4.14.0.94` and `numpy==2.2.6`
+- **Python 3.11, standard library first.** YouTube's APIs are called over plain HTTPS, not through a
+  client library. A third-party package is allowed only when the platform shelf carries it as a
+  pinned wheel: today `opencv-python-headless==4.14.0.94` and `numpy==2.2.6`
   (see [Dependencies](#dependencies)). Nothing here is installed by running code from this
   repository: there is no installer and there must not be one.
 - **No secrets in a script's arguments or files.** A token comes from
@@ -59,7 +60,6 @@ finds it relative to its own file.
 | --- | --- | --- |
 | `opencv-python-headless` | `4.14.0.94` | `youtube-thumbnail-check`, `youtube-channel-setup` previews |
 | `numpy` | `2.2.6` | the same — the last numpy with a CPython 3.11 wheel |
-| `google-api-python-client` | shelf pin | `youtube-data` |
 | `yt-dlp` | shelf pin | `youtube-data` (transcripts, public thumbnails) |
 
 `opencv-python` 5.x ships without the Haar cascades, so face detection fails there silently; the

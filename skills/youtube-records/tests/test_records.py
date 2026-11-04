@@ -89,6 +89,12 @@ class Refusals(unittest.TestCase):
         self.assertIn("reply_id", self.check("replied", comment_id="UgxAAAAAAAAAAAA", video_id=VIDEO,
                                              action="reply", at="2026-11-04T10:00:00Z", source="community"))
 
+    def test_two_actions_on_one_comment_are_two_records(self):
+        base = dict(comment_id="UgxAAAAAAAAAAAA", video_id=VIDEO, at="2026-11-04T10:00:00Z", source="community")
+        reply = records.build("replied", dict(base, action="reply", reply_id="UgxAAAAAAAAAAAA.9zCCCCCCCCCCC"))[0]
+        pin = records.build("replied", dict(base, action="pin"))[0]
+        self.assertEqual((reply, pin), ("replied:UgxAAAAAAAAAAAA:reply", "replied:UgxAAAAAAAAAAAA:pin"))
+
     def test_a_reply_comment_id_has_a_parent(self):
         _, data = records.build("replied", dict(comment_id="UgxAAAAAAAAAAAA.9zBBBBBBBBBBB", video_id=VIDEO,
                                                 action="pin", at="2026-11-04T10:00:00Z", source="community"))
