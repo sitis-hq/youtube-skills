@@ -16,7 +16,7 @@ that matches the step before writing anything:
 | Channel copy: name, handle, About, links | `references/channel-copy.md` | `channel-copy.md` |
 | Home page: trailer, featured video, sections | `references/home-page.md` | `intro-script.md`, `sections-plan.md` |
 | Recommended settings (onboarding) and settings recommendations (analytics) | `references/settings.md` | `channel-settings.md` / `settings-reco.md` |
-| Applying branding or settings | `references/settings.md` → "What changes where" | the change, through `youtube-studio` / the API under an intent reservation |
+| Applying branding or settings | `references/settings.md` → "What changes where", then "Applying" below | the change, through `apply_channel.py` or a `youtube-studio` playbook, under an intent reservation |
 
 ## Banner
 
@@ -52,6 +52,31 @@ The owner approves the banner by seeing it **with and without the safe zone**: t
 `banner-upload.jpg` and `banner-zones.png` together (and `banner-phone.png` when text matters), and
 for the avatar `avatar-circle.png` and `avatar-sizes.png`. Nothing is uploaded before the owner's
 yes; uploading is an irreversible action (see `references/settings.md`).
+
+## Applying
+
+After the owner's yes, the API half is one script; each command claims its intent key itself
+(`settings:channel:<desired state>`, `branding:banner|watermark:<file>`), so a repeated run skips.
+
+```bash
+python3 <base>/scripts/apply_channel.py branding --desired <desired.json> [--dry-run]
+python3 <base>/scripts/apply_channel.py banner --image <artifact dir>/banner/banner-upload.jpg
+python3 <base>/scripts/apply_channel.py watermark --image <mark.png> --timing offsetFromEnd --offset-ms 15000 [--duration-ms N]
+```
+
+- `desired.json` holds only the fields to set, out of `description` (≤ 1,000 characters),
+  `keywords` (≤ 500), `country`, `defaultLanguage`, `unsubscribedTrailer`. The script sends the
+  whole `brandingSettings` part back, so nothing else is lost; `"changed": false` means nothing
+  differed and nothing was claimed. Run `--dry-run` first and show the owner the diff.
+- The banner must already fit YouTube's limits (`banner_preview.py` output does); a watermark is a
+  square PNG/JPEG, ≥ 150×150, under 1 MB. Both are refused before any claim otherwise.
+- `"uncertain": true` → do not retry; check the channel on YouTube and tell the owner.
+  `"fallback": "studio"` → the connection lacks the scope: do it with the named playbook.
+- Pass `--spec-template-id` and `--project-id`, or run where `current-task.md` names them. The
+  output reports `units_used` (channels.list 1, each write 50).
+
+Home sections and the profile picture are not here: they stay with the Studio playbooks
+(`youtube-studio/references/home-tab.md`, `youtube-studio/references/channel-profile.md`).
 
 ## Memory and credentials
 

@@ -4,6 +4,11 @@ Used by Onboarding (apply branding, apply settings). The content — texts, bann
 is prepared by youtube-channel-setup; this file says how each change is made once. **API first**:
 the browser only for what has no method.
 
+**Do the API rows with `youtube-channel-setup: scripts/apply_channel.py`** (`branding`, `banner`,
+`watermark`). It reads the whole part before writing it, claims and commits the intent, and verifies
+the result. Do not compose these requests by hand. The table below is what the script does, kept so
+the reason is visible.
+
 ## What the API can do (Data API v3 reference, read 2026-11-04)
 
 | Change | Method | Units | Notes |

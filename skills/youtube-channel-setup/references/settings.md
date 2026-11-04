@@ -14,25 +14,27 @@ recipe's point of view: it goes through an intent reservation, and browser work 
 | --- | --- | --- | --- |
 | Channel name | — | Customization → Basic info | rate-limited by YouTube; owner decides |
 | Handle | — | Customization → Basic info | rules in `channel-copy.md` |
-| Description (About) | `channels.update` `brandingSettings.channel.description` | also | ≤ 1,000 characters |
-| Channel keywords | `brandingSettings.channel.keywords` | Settings → Channel | space-separated, phrases in quotes |
-| Country of residence | `brandingSettings.channel.country` | Settings → Channel | a legal/monetisation fact about the owner, not a reach lever |
-| Default language | `brandingSettings.channel.defaultLanguage` | | the language of the channel's own title and description |
+| Description (About) | `apply_channel.py branding` (`channels.update` `brandingSettings.channel.description`) | also | ≤ 1,000 characters |
+| Channel keywords | `apply_channel.py branding` (`brandingSettings.channel.keywords`) | Settings → Channel | space-separated, phrases in quotes |
+| Country of residence | `apply_channel.py branding` (`brandingSettings.channel.country`) | Settings → Channel | a legal/monetisation fact about the owner, not a reach lever |
+| Default language | `apply_channel.py branding` (`brandingSettings.channel.defaultLanguage`) | | the language of the channel's own title and description |
 | Translations of name and description | `localizations.<lang>.title/description` | also | |
 | Made for kids (channel default) | `status.selfDeclaredMadeForKids` | Settings → Channel → Advanced | legal declaration (COPPA); never guess, ask the owner if unclear |
-| Trailer for non-subscribers | `brandingSettings.channel.unsubscribedTrailer` | Customization → Layout | |
+| Trailer for non-subscribers | `apply_channel.py branding` (`brandingSettings.channel.unsubscribedTrailer`) | Customization → Layout | |
 | Featured video for subscribers | — | Customization → Layout | |
-| Home sections | `channelSections.*` (≤ 10 shelves) | Customization → Layout | verify the result on the page (`home-page.md`) |
-| Banner | `channelBanners.insert` (16:9, ≥ 2048×1152, ≤ 6 MB, JPEG/PNG, 50 units), then `channels.update` with `brandingSettings.image.bannerExternalUrl` = the returned url | Customization → Branding | `banner_preview.py` output fits these limits |
-| Profile picture | — | Customization → Branding | `avatar_preview.py` output |
-| Video watermark | `watermarks.set` / `watermarks.unset` | Customization → Branding | square, ≥ 150×150, < 1 MB; at the end (last 15 s), from a custom start, or the whole video (Help 10456525, read 2026-11-04) |
+| Home sections | `channelSections.*` (≤ 10 shelves) — not scripted | Customization → Layout | apply with `youtube-studio/references/home-tab.md`; verify the result on the page (`home-page.md`) |
+| Banner | `apply_channel.py banner`: `channelBanners.insert` (16:9, ≥ 2048×1152, ≤ 6 MB, JPEG/PNG, 50 units), then `channels.update` with `brandingSettings.image.bannerExternalUrl` = the returned url | Customization → Branding | `banner_preview.py` output fits these limits |
+| Profile picture | — | Customization → Branding | `avatar_preview.py` output; apply with `youtube-studio/references/channel-profile.md` |
+| Video watermark | `apply_channel.py watermark` (`watermarks.set`); `watermarks.unset` not scripted | Customization → Branding | square, ≥ 150×150, < 1 MB; at the end (last 15 s), from a custom start, or the whole video (Help 10456525, read 2026-11-04) |
 | Links, contact email | — | Customization → Basic info | values come from config credentials |
 | Upload defaults | — | Settings → Upload defaults | see below |
 
 **`channels.update` replaces the whole part.** Sending `brandingSettings` with only the field you
 change deletes every other existing value in it (the API docs say so). Always `channels.list
 part=brandingSettings` (or `localizations`, `status`) first, change the one field in that object,
-and send the whole object back. Each `channels.update` costs 50 quota units.
+and send the whole object back. Each `channels.update` costs 50 quota units. `apply_channel.py`
+does exactly this; compose the request by hand only for what it does not cover (`localizations`,
+`status`).
 
 ## Upload defaults (Studio → Settings → Upload defaults)
 
