@@ -6,7 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from ytskills import subtitles  # noqa: E402
+from ytskills import scoring, subtitles  # noqa: E402
 from ytskills.common import Refusal, parse_datetime, parse_duration, video_rows  # noqa: E402
 
 # The shape yt-dlp writes for YouTube auto-captions: inline word timings, each line shown again
@@ -113,6 +113,27 @@ class Common(unittest.TestCase):
         self.assertEqual(video_rows({"videos": [{"a": 1}, "x"]}), [{"a": 1}])
         with self.assertRaises(Refusal):
             video_rows("nope")
+
+
+
+class Scoring(unittest.TestCase):
+    def test_demand_takes_the_larger_tier_and_names_it(self):
+        self.assertEqual(scoring.demand(50, 90), (5.0, "yt_interest"))
+        self.assertEqual(scoring.demand(20_000, 10), (4.0, "volume"))
+        self.assertEqual(scoring.demand(None, 30), (2.0, "yt_interest"))
+        self.assertIsNone(scoring.demand(None, None))
+
+    def test_interest_tiers_round_halves_up_evenly(self):
+        self.assertEqual([scoring.interest_tier(v) for v in (0, 9, 10, 30, 50, 70, 90, 100)],
+                         [0, 0, 1, 2, 3, 4, 5, 5])
+
+    def test_an_interest_index_above_100_after_rescaling_stays_at_tier_5(self):
+        self.assertEqual(scoring.interest_tier(160), 5)
+
+    def test_opportunity_prefers_youtube_competition_over_the_web_proxy(self):
+        self.assertEqual(scoring.opportunity(0.2, 90), (4.0, "yt_competition"))
+        self.assertEqual(scoring.opportunity(None, 40), (3.0, "kd_web (web proxy)"))
+        self.assertIsNone(scoring.opportunity(None, None))
 
 
 if __name__ == "__main__":

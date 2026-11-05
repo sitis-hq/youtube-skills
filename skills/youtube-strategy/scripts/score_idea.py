@@ -4,14 +4,9 @@
 Five dimensions on a 0-5 scale. Two are computed from the idea's `seed` record, three are judged by
 the agent against the anchored rubric in references/ideation.md:
 
-  demand       computed: max(volume tier, interest tier)
-                 volume tier (Google web monthly searches): 0 -> 0, 1-99 -> 1, 100-999 -> 2,
-                   1k-9.9k -> 3, 10k-99.9k -> 4, >=100k -> 5
-                 interest tier (Trends YouTube index): round(yt_interest / 20)
-               The larger of the two, because web volume undercounts YouTube-native searches
-               (mixes, edits, music) and the index alone has no absolute size.
+  demand       computed: max(volume tier, interest tier), from lib/ytskills/scoring.py
   opportunity  computed: 5 * (1 - yt_competition); without it 5 * (1 - kd_web / 100), marked as a
-               web proxy.
+               web proxy (lib/ytskills/scoring.py, shared with youtube-demand niches.py).
   fit          judged: how squarely the idea sits in a content pillar and the channel's identity.
   packaging    judged: whether hook, title-with-keyword and thumbnail concept are each clear in a line.
   feasibility  judged: whether the channel can make it at its cadence and resources.
@@ -35,9 +30,13 @@ import sys
 from pathlib import Path
 from typing import Any
 
-WEIGHTS = {"demand": 0.25, "opportunity": 0.20, "fit": 0.25, "packaging": 0.15, "feasibility": 0.15}
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "lib"))
+
+from ytskills import scoring  # noqa: E402
+from ytskills.scoring import volume_tier  # noqa: E402,F401  (kept importable here: tests and readers use it)
+
+WEIGHTS = {"demand": scoring.DEMAND_WEIGHT, "opportunity": scoring.OPPORTUNITY_WEIGHT, "fit": 0.25, "packaging": 0.15, "feasibility": 0.15}
 JUDGED = ("fit", "packaging", "feasibility")
-VOLUME_TIERS = ((100_000, 5), (10_000, 4), (1_000, 3), (100, 2), (1, 1))
 
 
 class Refusal(Exception):
@@ -56,13 +55,6 @@ def _num(name: str, v: Any, lo: float, hi: float) -> float | None:
     return x
 
 
-def volume_tier(volume: float) -> int:
-    for floor, tier in VOLUME_TIERS:
-        if volume >= floor:
-            return tier
-    return 0
-
-
 def score_one(idea: dict[str, Any]) -> dict[str, Any]:
     seed = {**(idea.get("seed") or {}), **{k: v for k, v in idea.items() if k != "seed"}}
     basis: dict[str, str] = {}
@@ -74,12 +66,7 @@ def score_one(idea: dict[str, Any]) -> dict[str, Any]:
     if demand is not None:
         dims["demand"], basis["demand"] = demand, "judged"
     elif volume is not None or interest is not None:
-        tiers = []
-        if volume is not None:
-            tiers.append(volume_tier(volume))
-        if interest is not None:
-            tiers.append(min(5, round(interest / 20)))
-        dims["demand"], basis["demand"] = float(max(tiers)), "seed"
+        dims["demand"], basis["demand"] = scoring.demand(volume, interest)[0], "seed"
     else:
         raise Refusal("demand: the seed has neither volume nor yt_interest; measure it (youtube-demand) "
                       "or give --demand 0-5 by the rubric")
@@ -89,10 +76,9 @@ def score_one(idea: dict[str, Any]) -> dict[str, Any]:
     kd = _num("kd_web", seed.get("kd_web"), 0, 100)
     if opportunity is not None:
         dims["opportunity"], basis["opportunity"] = opportunity, "judged"
-    elif comp is not None:
-        dims["opportunity"], basis["opportunity"] = 5 * (1 - comp), "seed:yt_competition"
-    elif kd is not None:
-        dims["opportunity"], basis["opportunity"] = 5 * (1 - kd / 100), "seed:kd_web (web proxy)"
+    elif comp is not None or kd is not None:
+        value, measured = scoring.opportunity(comp, kd)
+        dims["opportunity"], basis["opportunity"] = value, f"seed:{measured}"
     else:
         raise Refusal("opportunity: the seed has neither yt_competition nor kd_web; give --opportunity 0-5")
 
