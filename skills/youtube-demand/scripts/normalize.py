@@ -2,8 +2,8 @@
 """Turn saved DataForSEO responses into `seed` rows: term, volume, cpc, kd_web, intent, yt_interest,
 yt_competition, as_of — the fields of the `seed` record in youtube-records, in its units.
 
-The step calls DataForSEO (MCP `api_request` with noAiMode: true, or the CLI with --no-ai-mode),
-saves each response body to a file as it came, and passes the files here:
+The step calls DataForSEO with dfs.py (next to this file), which saves each response body to a file
+as it came, and passes the files here:
 
   --labs FILE     /v3/dataforseo_labs/google/{keyword_overview,keyword_ideas,related_keywords}/live,
                   or the fallback /v3/keywords_data/google_ads/search_volume/... (repeatable)
@@ -166,6 +166,15 @@ def trends(result: dict[str, Any], batches: list[list[str]], related: list[dict[
     return interest
 
 
+def require_youtube_trends(doc: dict[str, Any], path: str) -> None:
+    for task in doc.get("tasks") or []:
+        ttype = (task.get("data") or {}).get("type", "web")
+        if task.get("status_code") == 20000 and ttype != "youtube":
+            # Web interest under a field named yt_interest would be a silent lie.
+            raise Refusal(f"{path}: Trends task {task.get('id')} has type {ttype!r}; yt_interest "
+                          "needs \"type\": \"youtube\"")
+
+
 def merge(rows: dict[str, dict[str, Any]], row: dict[str, Any], source: str) -> None:
     key = term_key(row["term"])
     have = rows.setdefault(key, {"term": key, "source": source})
@@ -220,12 +229,7 @@ def run(argv: list[str] | None = None) -> dict[str, Any]:
     for path in a.trends:
         doc = load(path)
         cost += float(doc.get("cost") or 0)
-        for task in doc.get("tasks") or []:
-            ttype = (task.get("data") or {}).get("type", "web")
-            if task.get("status_code") == 20000 and ttype != "youtube":
-                # Web interest under a field named yt_interest would be a silent lie.
-                raise Refusal(f"{path}: Trends task {task.get('id')} has type {ttype!r}; yt_interest "
-                              "needs \"type\": \"youtube\"")
+        require_youtube_trends(doc, path)
         for result in results(doc, path, errors):
             for kw, value in trends(result, batches, related, warnings).items():
                 key = term_key(kw)
