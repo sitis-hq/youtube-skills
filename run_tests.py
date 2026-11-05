@@ -8,7 +8,7 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parent
 suite = unittest.TestSuite()
-for tests in sorted(root.glob("skills/*/tests")) + sorted(root.glob("lib/*/tests")):
+for tests in sorted(root.glob("skills/*/tests")) + sorted(root.glob("lib/*/tests")) + [root / "recipes" / "tests"]:
     suite.addTests(unittest.defaultTestLoader.discover(str(tests), pattern="test_*.py", top_level_dir=str(tests)))
 result = unittest.TextTestRunner(verbosity=2 if "-v" in sys.argv else 1).run(suite)
 if result.testsRun == 0:

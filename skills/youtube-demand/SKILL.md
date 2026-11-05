@@ -1,6 +1,6 @@
 ---
 name: youtube-demand
-description: Keyword demand for a YouTube channel through DataForSEO — Google web search volume, CPC, web keyword difficulty and intent (Labs), YouTube search interest index (Google Trends type=youtube), rising related queries, and competition in the YouTube top 20 (our formula over the YouTube SERP). Use when a step measures or expands seed keywords (Onboarding seed set, weekly Recon keyword research and rising queries, Planning's keywords for repackaging) and writes `seed` records.
+description: Keyword demand for a YouTube channel through DataForSEO — Google web search volume, CPC, web keyword difficulty and intent (Labs), YouTube search interest index (Google Trends type=youtube), rising related queries, competition in the YouTube top 20 (our formula over the YouTube SERP), and niche candidates ranked by both; calls go through scripts/dfs.py. Use when a step chooses a niche (demand against competition, niches.py) or measures or expands seed keywords (Onboarding seed set, weekly Recon keyword research and rising queries, Planning's keywords for repackaging) and writes `seed` records.
 ---
 
 # YouTube demand
@@ -18,7 +18,27 @@ description: Keyword demand for a YouTube channel through DataForSEO — Google 
 - `yt_competition` is **ours**: a 0..1 heuristic from the YouTube top 20 (below). Treat it as a
   ranking aid between keywords, not as a measurement.
 
-## Access: DataForSEO MCP server `dataforseo-mcp-server@3.1.3`
+## Access: `scripts/dfs.py`, one call per response file
+
+Call DataForSEO through this skill's script. It does what a client written inside a run tends to get
+wrong: it asks for the documented full response (never the trimmed `.ai` one), saves the body to a
+file untouched, sends one task per Live call, reads `DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD` from
+the environment without printing them, and tells an account error from a failed task.
+
+```bash
+python3 <base>/scripts/dfs.py post /v3/serp/youtube/organic/live/advanced \
+    --data '{"keyword": "texas country", "location_name": "United States", "language_code": "en", "device": "mobile", "block_depth": 20}' \
+    --out serp-texas-country.json
+python3 <base>/scripts/dfs.py post /v3/dataforseo_labs/google/keyword_overview/live --data-file body.json --out labs.json
+python3 <base>/scripts/dfs.py get /v3/serp/youtube/organic/tasks_ready --out ready.json
+```
+
+It prints `{"ok", "out", "cost", "tasks": [...], "failed_tasks"}`; exit 2 is a refusal or a failed
+call (`40100` unauthorised, `40200` balance empty, `40202` rate limit), and the body that came back
+is still saved. An existing `--out` is not replaced without `--overwrite`. Do not write another
+client in the run.
+
+### The MCP server `dataforseo-mcp-server@3.1.3`, for docs and one-off questions
 
 Checked against the 3.1.3 package source (2026-11-04). The server exposes four generic tools —
 `docs_index`, `docs_list_sections`, `docs_search`, `api_request`; the named tools older guides
@@ -30,11 +50,9 @@ mention (`kw_data_google_trends_explore`, `serp_youtube_organic_live_advanced`, 
   undocumented trimmed shape; the scripts here read only the documented full response and refuse
   anything else. GET calls (`task_get`, `tasks_ready`) need it too.
 - **Save the response body to a file exactly as it came** (one file per call, under the step's work
-  directory) and pass the files to the scripts. Do not retype or summarise numbers.
+  directory) and pass the files to the scripts. Do not retype or summarise numbers. A response that
+  only came back into the conversation cannot be passed to a script: for data, use `dfs.py`.
 - A **Live** endpoint takes one task per call; the server silently drops extra tasks with a warning.
-- Shell variant, same binary, keeps big responses out of the conversation:
-  `npx -y dataforseo-mcp-server@3.1.3 request -X POST -p <path> -d '<json array>' --no-ai-mode > file.json`
-  (use only when the step has node; a leading `Warning:` line is tolerated by the scripts).
 - **Credentials** (secret credentials of the project): `DATAFORSEO_LOGIN` and `DATAFORSEO_PASSWORD`,
   the API login/password from app.dataforseo.com/api-access, not the account password. The server
   reads `DATAFORSEO_LOGIN` and falls back to `DATAFORSEO_USERNAME` as an alias; the password has no
@@ -76,6 +94,8 @@ Weekly budget guide for one channel (demand review): ~30 seeds → about $0.2–
 
 | Need | Command |
 | --- | --- |
+| Call DataForSEO and save the response | `python3 <base>/scripts/dfs.py post\|get <path> [--data JSON \| --data-file F] --out F` |
+| Niche candidates ranked by demand and competition | `python3 <base>/scripts/niches.py --serp F [--serp F2 ...] [--labs F] [--trends F ...] [--anchor TERM] [--channels F] --as-of YYYY-MM-DD` |
 | Saved responses → `seed` rows | `python3 <base>/scripts/normalize.py --labs F [--labs F2] [--trends F] [--serp F] [--channels F] [--only TERM ...] --as-of YYYY-MM-DD` |
 | Competition alone | `python3 <base>/scripts/yt_competition.py --serp F [--channels F]` or `--videos F --keyword K` |
 
@@ -93,6 +113,26 @@ Write each chosen row through youtube-records:
 the DataForSEO SERP has no subscriber counts, so without `--channels` competition is computed
 without the authority part. `--videos` lets a step use Data API search results instead of the
 DataForSEO SERP (pass ids in search-rank order).
+
+## `niches.py` — choosing a niche
+
+A sub-genre many people watch is not one a new channel can enter: the most watched are held by the
+biggest channels. `niches.py` scores each niche term on both sides with the tiers the idea score
+uses (`lib/ytskills/scoring.py`): demand 0–5 from Labs volume or the Trends index, opportunity
+`5 × (1 − yt_competition)`, and `niche_score` 0–100 in the idea score's ratio between the two (0.25
+to 0.20). Give it, for the same 8–15 terms:
+
+1. one SERP file per term (`/v3/serp/youtube/organic/live/advanced`);
+2. one Labs `keyword_overview` file for all the terms (volume, kd_web);
+3. Trends compare files of up to 5 terms each, **with the same anchor term in every request** —
+   usually the owner's broad topic — and `--anchor <that term>`. Indices of different requests are
+   on different scales; the anchor puts them on the first request's scale. Without it the script
+   reports the indices but does not use them for demand.
+
+Read per niche `niche_score`, `demand`, `opportunity`, `competition` (with its parts) and `now`
+(median views per day and the top three videos — what the niche pulls today). `same_results` lists
+term pairs whose top results are at least half the same videos: one audience, not two niches.
+A niche with no measured demand is listed with `unscored` and is not ranked by guesswork.
 
 ## `yt_competition` — the formula (a heuristic)
 
@@ -114,8 +154,9 @@ The anchors (100 views, 10M views, 1k–10M subscribers) are our choices, not Yo
 
 ## Which recipe uses what
 
-- **Onboarding (1)**: niche check (`keyword_overview` + Trends compare on 10–15 niche terms, SERP on
-  3–5 core terms), then the initial seed set → `seed` records (`--source dataforseo`).
+- **Onboarding (1)**: niche check — SERP, `keyword_overview` and anchored Trends compare on the 8–15
+  niche terms, then `niches.py` (step 1); then the initial seed set → `seed` records
+  (`--source dataforseo`, step 6).
 - **Recon (3)**: rising queries per main seed (Trends queries list) → measure with Labs → new
   `seed` records in Recon's own memory; SERP for competition of the week's candidates. Recon never
   rewrites a record in Onboarding's memory (one writer per record; see youtube-records).

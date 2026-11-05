@@ -13,7 +13,7 @@ and raising one pin on the shelf moves every copy.
 | [`youtube-data`](skills/youtube-data/SKILL.md) | Data API and Analytics API reads within quota, retention curves, transcripts, competitor thumbnails |
 | [`youtube-metrics`](skills/youtube-metrics/SKILL.md) | Growth velocity and anomalies, candidate scoring, outliers both ways, retention diagnosis, title and thumbnail-text checks |
 | [`youtube-thumbnail-check`](skills/youtube-thumbnail-check/SKILL.md) | Computer-vision measurements of a thumbnail: faces, contrast, colour, text density, mobile legibility |
-| [`youtube-demand`](skills/youtube-demand/SKILL.md) | Keyword demand through DataForSEO: volume, CPC, web keyword difficulty, YouTube interest index, YouTube SERP competition |
+| [`youtube-demand`](skills/youtube-demand/SKILL.md) | Keyword demand through DataForSEO (`dfs.py` makes every call): volume, CPC, web keyword difficulty, YouTube interest index, YouTube SERP competition, niches ranked by demand against competition |
 | [`youtube-strategy`](skills/youtube-strategy/SKILL.md) | Channel strategy, idea generation, content calendar and analytics reports — output templates and dated thresholds |
 | [`youtube-channel-setup`](skills/youtube-channel-setup/SKILL.md) | Brand profile, banner and avatar with device safe-area previews, About text, home page sections, channel settings |
 | [`youtube-metadata`](skills/youtube-metadata/SKILL.md) | Titles, descriptions, tags, hashtags, chapters, Shorts metadata and thumbnail A/B tests |

@@ -72,6 +72,20 @@ A step's text names the script and the command, for example
 `youtube-data: scripts/data_api.py channels --mine`. Exact flags are left to the skill's own
 `SKILL.md`, which the agent reads at run time.
 
+**A step names every script it must run.** The agent reads a skill's `SKILL.md` to learn *how* to
+call a script; whether to call it, it takes from the step. A script described only in the skill is
+optional in the agent's eyes, and it will improvise instead (the first Onboarding run ranked niches
+without the competition script that sat in the attached skill, and wrote its own DataForSEO client).
+So:
+
+- a brief names, step by step, each script the step runs, as `<skill>: scripts/<script>.py`;
+- a skill attached to a step is there because the step's text names one of its scripts or
+  references; a skill attached with nothing named is a gap in the brief;
+- the table [Scripts and the steps that run them](#scripts-and-the-steps-that-run-them) below lists
+  every script of the set with the briefs and steps that run it. `python3 run_tests.py` checks it
+  against the scripts in `skills/` and against the briefs: a new script needs a row, and a brief that
+  names a script must be cited in its row.
+
 ### 4. Memory goes only through `youtube-records`
 
 - A step never writes a record by hand. It calls `records.py write <kind> …`, which validates the
@@ -138,3 +152,38 @@ Apply them only after the owner approves.
 
 Turn on the step validator wherever the brief gives a rubric. The rubric says what must be true of
 the step's artifacts, not how the step was done.
+
+## Scripts and the steps that run them
+
+A row cites `<brief>: <steps>`. "Planned" names the brief that will run the script once written.
+"Inside" means another script runs it, and no step calls it directly.
+
+| Skill | Script | Run by |
+| --- | --- | --- |
+| `youtube-records` | `records.py` | 1: 6, 7 |
+| `youtube-demand` | `dfs.py` | 1: 1, 3, 6 |
+| `youtube-demand` | `niches.py` | 1: 1 |
+| `youtube-demand` | `normalize.py` | 1: 6 |
+| `youtube-demand` | `yt_competition.py` | inside `niches.py` and `normalize.py`; planned: 3 |
+| `youtube-data` | `data_api.py` | 1: 11, 18 |
+| `youtube-data` | `analytics.py` | 1: 18 |
+| `youtube-data` | `reporting.py` | 1: 11 |
+| `youtube-data` | `transcript.py` | planned: 3, 4 |
+| `youtube-data` | `thumbnails.py` | planned: 3 |
+| `youtube-metrics` | `ypp.py` | 1: 18 |
+| `youtube-metrics` | `velocity.py` | planned: 2 |
+| `youtube-metrics` | `candidates.py` | planned: 3 |
+| `youtube-metrics` | `swipe.py` | planned: 3, 4 |
+| `youtube-metrics` | `retention.py` | planned: 4 |
+| `youtube-metrics` | `deadair.py` | planned: 4 |
+| `youtube-metrics` | `title.py` | planned: 3, 5 |
+| `youtube-metrics` | `chapters.py` | planned: 5 |
+| `youtube-thumbnail-check` | `analyze_thumbnail.py` | planned: 3, 4 |
+| `youtube-strategy` | `score_idea.py` | planned: 3 |
+| `youtube-channel-setup` | `banner_preview.py` | 1: 12 |
+| `youtube-channel-setup` | `avatar_preview.py` | 1: 12 |
+| `youtube-channel-setup` | `apply_channel.py` | 1: 16 |
+| `youtube-metadata` | `check_metadata.py` | 1: 13 |
+| `youtube-community` | `comments.py` | planned: 6 |
+| `youtube-studio` | `intent.py` | 1: 16, 17 |
+| `youtube-studio` | `studio_reach.py` | planned: 2 |
