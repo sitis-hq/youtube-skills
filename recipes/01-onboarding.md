@@ -38,8 +38,8 @@ Every later recipe of the set stands on what Onboarding leaves behind:
 
 ## Requirements (EARS) to put into the recipe
 
-1. WHEN discovery runs THEN system MUST rank niche candidates by measured demand AND measured YouTube competition together, from real YouTube results, and MUST name candidate terms whose results are mostly the same videos as one audience.
-2. WHEN a niche is chosen THEN system MUST record the choice, a rationale that cites both its demand and its competition, and the main risks.
+1. WHEN discovery runs THEN system MUST rank niche candidates by how open each is to a new channel — small channels breaking out above their own median, how spread the top results are across channels, how fresh they are — measured on real YouTube results, with demand as a floor, and MUST name candidate terms whose results are mostly the same videos as one audience.
+2. WHEN a niche is chosen THEN system MUST recommend the most open niche over the demand floor unless a stated reason with numbers rules it out, MUST record the choice with a rationale that cites its openness and its demand, and MUST name the main risks.
 3. WHEN the audience, formats and brand are defined THEN system MUST produce `audience-profile.md`, `format-plan.md` and `brand-profile.md` as durable artifacts.
 4. WHEN seed keywords are produced THEN system MUST write each one as a `seed` record through `records.py`, with `kd_web` on DataForSEO's 0–100 scale and `yt_interest` marked as an index.
 5. WHEN the channel exists THEN system MUST write the `profile:channel` record, with channel id, title, language, niche, channel type and identity tokens.
@@ -59,7 +59,7 @@ attached to the recipe, as rule 2 says.
 
 | # | Step | Who | Skills and tools on the step | Credentials | Writes |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Niche discovery | AI + owner | `youtube-demand`, `dataforseo-mcp-server` | `DATAFORSEO_LOGIN`, `DATAFORSEO_PASSWORD` | `niche-candidates.json` |
+| 1 | Niche discovery | AI + owner | `youtube-demand`, `youtube-data`, `yt-dlp`, `dataforseo-mcp-server` | `DATAFORSEO_LOGIN`, `DATAFORSEO_PASSWORD` | `niche-candidates.json` |
 | 2 | Niche selection | AI + owner | `youtube-strategy` | — | `niche-decision.md` |
 | 3 | Audience, language and region | AI | `youtube-strategy`, `youtube-demand`, `dataforseo-mcp-server` | DataForSEO keys | `audience-profile.md` |
 | 4 | Formats and content pillars | AI | `youtube-strategy` | — | `format-plan.md` |
@@ -82,40 +82,48 @@ attached to the recipe, as rule 2 says.
 
 **1 — Niche discovery.**
 
-A niche that many people watch is not one a new channel can enter: the most watched sub-genres are
-held by the biggest channels. So the step measures both demand and competition, and ranks by both.
+Popularity is not what makes a niche hard. A niche is hard when a few channels hold its top, when
+the top is old, and when small channels never break through; a popular niche that is spread out and
+fresh is the best case, because its demand is proven. So the step measures those three and ranks by
+them, with demand as a floor. The method and its sources are in `youtube-demand/SKILL.md` and
+`youtube-strategy/references/thresholds.md`.
 
 1. Ask the owner for the broad topic of the channel and anything already decided (genre, language,
    market), with `send-message`, then `await-reply`. Nothing earlier in the recipe holds it. Write
    the answer into `niche-candidates.json` as `topic`.
-2. From the topic, choose 8–15 candidate niche terms: sub-genres or sub-topics a viewer would search.
-3. Make every DataForSEO call with `youtube-demand: scripts/dfs.py`, one response file per call. Do
-   not write another client. The request bodies are in `youtube-demand/SKILL.md`. Location and
-   language come from the owner's answer.
-   - one YouTube SERP per term (`/v3/serp/youtube/organic/live/advanced`);
-   - one Labs `keyword_overview` for all the terms;
-   - Trends compare with `type: youtube`, up to 5 terms a request, **the broad topic as the anchor in
-     every request**.
-4. Rank them with `youtube-demand: scripts/niches.py`, passing every SERP, Labs and Trends file and
-   `--anchor <topic>`. It scores each term on demand and on competition (`yt_competition`), gives a
-   `niche_score` 0–100, and lists in `same_results` the terms whose top results are mostly the same
-   videos.
-5. Write `niche-candidates.json`: the `topic`, the terms, and the script's output as it came. Its
-   `warnings` stay in. Subscriber counts are not available before step 11, so competition is
-   traffic and targeting only; the output says so, and the step accepts that.
+2. From the topic, choose 8–15 candidate niche terms: sub-genres or sub-topics a viewer would look
+   for.
+3. Get one YouTube SERP per term (`/v3/serp/youtube/organic/live/advanced`) with
+   `youtube-demand: scripts/dfs.py`, one response file per call. Do not write another client.
+   Location and language come from the owner's answer.
+4. Read each ranking channel's normal with `youtube-data: scripts/channel_baselines.py`, passing
+   every SERP file. It reads public pages through yt-dlp and needs no connection. If it stops on
+   429, wait and run it again with the same arguments: it continues where it stopped.
+5. Rank with `youtube-demand: scripts/niches.py`, passing every SERP file and `--baselines`.
+6. Write `niche-candidates.json`: the `topic`, the terms, and the script's output as it came,
+   `warnings` included.
 
 **2 — Niche selection.**
-- Start from step 1's ranking by `niche_score`. Weigh it with `youtube-strategy`
-  (`references/strategy.md`): durability, and how well the niche fits the owner's answer.
-- Treat terms in `same_results` as one niche.
-- A niche with high demand and high competition (the top results pull huge numbers for big
-  channels) is a risk to name, not a reason to choose it.
-- Present the top 2–3 niches to the owner with buttons. For each, give its demand, its competition
-  and its `niche_score`. Then wait for the answer.
+
+The ranking decides; the step does not re-rank by taste.
+
+1. Recommend the top niche of step 1's ranking: the most open one over the demand floor. Treat terms
+   in `same_results` as one niche.
+2. Recommend another niche only for a reason stated with numbers: the owner's answer in step 1 rules
+   the top one out, or its `confidence` is "low" while the next one's is "normal". Write the reason.
+3. Weigh durability and fit with `youtube-strategy` (`references/strategy.md`), and turn what you
+   find into named risks of the recommended niche, not into a new order.
+4. Describe a niche only with the numbers in `niche-candidates.json` and the lines in
+   `youtube-strategy/references/thresholds.md`. A claim from elsewhere carries its source and date,
+   or is left out.
+5. Send the owner the recommended niche first and at most two alternatives, each with the same
+   numbers: openness and its three parts, demand (median views of the top), and one or two of its
+   breakout videos. Use buttons, recommended first. Then wait for the answer.
 
 Validator rubric:
 - exactly one niche is chosen;
-- the rationale cites the chosen niche's demand and its competition from `niche-candidates.json`;
+- it is step 1's top niche, or `niche-decision.md` states the reason with numbers;
+- the rationale cites the chosen niche's openness and demand from `niche-candidates.json`;
 - at least two named, specific risks are given;
 - the owner's choice is in the chat.
 
@@ -273,6 +281,7 @@ Validator rubric:
 | impressions and CTR planned through Studio | Reporting API job created in step 11 |
 | links not stored | `LINK_*` config credentials |
 | `DATAFORSEO_USERNAME` | `DATAFORSEO_LOGIN` (the server still reads `USERNAME` as an alias) |
-| niche ranked by views per day of age (`candidates.py`) | ranked by demand and competition together (`niches.py`), terms with the same results merged |
+| niche ranked by views per day of age (`candidates.py`) | ranked by openness — breakouts of small channels, spread, freshness — with demand as a floor (`niches.py`); terms with the same results merged |
+| step 2 chose among options by taste | step 2 recommends the top of the ranking unless a stated reason with numbers rules it out |
 | the topic of the channel assumed | asked from the owner at the start of step 1 |
 | DataForSEO through MCP, or a client written in the run | `youtube-demand: scripts/dfs.py`, one saved response per call |

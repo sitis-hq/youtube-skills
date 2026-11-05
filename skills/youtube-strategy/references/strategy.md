@@ -18,8 +18,8 @@ are tied to the YPP thresholds YouTube publishes; the result also fills the `pro
 
 1. **Pick the channel type** from channel-types.md. It becomes `profile.channel_type`.
 2. **Positioning** in one sentence: `[Channel] helps [specific viewer] get [outcome] through
-   [format/angle], unlike [what the incumbents do]`. Start narrow (a micro-niche the channel can own
-   with 30–50 videos) and name the widening step for later.
+   [format/angle], unlike [what the incumbents do]`. Start narrow (a micro-niche the channel can own;
+   "30–50 videos" is an upstream rule of thumb with no source) and name the widening step for later.
 3. **Niche viability** from data, each line with its number and source:
    - demand: volumes (web) and `yt_interest` (relative, same-batch only) of the core terms;
      trend direction from the Trends series (rising / flat / falling over 12 months);

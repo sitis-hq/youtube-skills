@@ -1,6 +1,6 @@
 ---
 name: youtube-data
-description: Deterministic YouTube reads within quota — Data API v3 (video stats in batches of 50, channel facts, a channel's uploads, search with a unit budget), Analytics API (per-video views, watch time, average view duration and percentage, traffic sources, the retention curve as a CSV for youtube-metrics' retention.py), Reporting API reach reports (thumbnail impressions and CTR as studio records), transcripts from subtitles through yt-dlp, and public thumbnail downloads of any video. Use whenever a step needs numbers or files from YouTube rather than an opinion: daily snapshots, recon candidates, weekly analytics, retention diagnosis, competitor thumbnails.
+description: Deterministic YouTube reads within quota — Data API v3 (video stats in batches of 50, channel facts, a channel's uploads, search with a unit budget), Analytics API (per-video views, watch time, average view duration and percentage, traffic sources, the retention curve as a CSV for youtube-metrics' retention.py), Reporting API reach reports (thumbnail impressions and CTR as studio records), transcripts from subtitles through yt-dlp, channels' median views and subscribers from their public pages (channel_baselines.py, no token), and public thumbnail downloads of any video. Use whenever a step needs numbers or files from YouTube rather than an opinion: niche research before the channel is connected, daily snapshots, recon candidates, weekly analytics, retention diagnosis, competitor thumbnails.
 ---
 
 # YouTube data
@@ -29,6 +29,7 @@ the owner connects YouTube on the project's credentials page — ask them.
 | Retention curve → CSV for retention.py | `analytics.py retention --id ID --start <published> --end D --duration <duration_s> --csv retention-ID.csv` | Analytics quota |
 | Anything else in Analytics (audience, revenue) | `analytics.py query --metrics ... --dimensions ... --filters ...` | Analytics quota |
 | Thumbnail impressions and CTR of own videos | `reporting.py ensure-job` once, then `reporting.py reach --ctr-scale <scale> --id ...` | Reporting API |
+| Each channel's median views of its latest uploads and its subscribers, before the channel is connected (niche research) | `channel_baselines.py --serp F [--serp F2 ...] --out baselines.json` or `--channel-id UC...`; resumable, stops on 429 | none (yt-dlp, public pages) |
 | Transcript (srt keeps timings) | `transcript.py --id ID --lang <channel language> --out ID.srt` | none (yt-dlp) |
 | Competitor or own thumbnails | `thumbnails.py --id ID ... --out-dir thumbs/` | none (public files) |
 

@@ -1,32 +1,40 @@
 #!/usr/bin/env python3
-"""Rank niche candidates by demand AND competition, from saved DataForSEO responses.
+"""Rank niche candidates by how open each one is to a new channel, with demand as a floor.
 
-A niche that many people watch is not the same as a niche a new channel can enter: the most watched
-sub-genres are held by the biggest channels. So a niche is scored on both sides, with the tiers the
-idea score uses (lib/ytskills/scoring.py), and the output says which numbers were measured.
+  niches.py --serp F [--serp F2 ...] --baselines baselines.json [--demand-floor 10000]
+            [--labs F ...] [--trends F ... --anchor TERM] [--top 20] [--as-of YYYY-MM-DD]
 
-  niches.py --serp F [--serp F2 ...] [--labs F ...] [--trends F ...] [--anchor TERM]
-            [--channels F] [--top 20] [--as-of YYYY-MM-DD]
+What makes a niche hard is not its popularity. YouTube matches videos to each viewer, and gives new
+channels a slot on the home page; a popular niche whose top is spread over many channels and keeps
+taking new videos is the best case, because its demand is proven. A niche is hard when a few
+incumbents hold the top, when the top is old, and when small channels never break through. Those
+three are measured here, over the niche term's YouTube top results:
 
-  --serp     /v3/serp/youtube/organic/live/advanced, one task per niche term. Every niche is a SERP
-             term; Labs or Trends terms with no SERP are listed in `warnings` and not ranked.
-  --labs     keyword_overview for the same terms -> volume (Google web) and kd_web
-  --trends   Trends explore, "type": "youtube", up to 5 terms a request -> yt_interest
-  --anchor   one term put into EVERY Trends request. Each request is rescaled so the anchor reads the
-             same as in the first one; that makes indices of different requests comparable. Without
-             it, indices from more than one request are not used for demand (a warning says so).
-  --channels youtube-data `channels` output: subscriber counts, the authority part of competition
+  breakouts      the share of the top videos that come from channels under 100k subscribers and have
+                 at least 3x their own channel's median views. Needs channel medians: youtube-data
+                 channel_baselines.py. 3x the channel's median is the outlier line of
+                 youtube-strategy thresholds.md (Paddy Galloway: "3 or 4 times more than the average
+                 at minimum on a channel"); 100k is the line between established and large channels
+                 in the same file. Videos whose channel has fewer than 5 uploads read are left out.
+  concentration  the share of the top videos held by the three channels with most of them
+  freshness      the share of the top videos published in the last 365 days
 
-Per niche:
-  demand       0-5: max(volume tier, interest tier); none measured -> the niche is not scored
-  competition  yt_competition 0..1 over the top results, with its parts (yt_competition.py)
-  opportunity  5 * (1 - yt_competition)
-  niche_score  0-100 from demand and opportunity, in the idea score's ratio between them
-  overlap      videos the niche's top results share with each other niche. Two terms whose results
-               are mostly the same videos are one audience, not two niches: see `same_results`.
-  now          the median views per day of age of the top results, and the top three videos —
-               what the niche pulls today, reported for the reader and not scored twice (it is
-               already inside competition's traffic part).
+  openness       0-100: the mean of breakouts, 1 - concentration and freshness, equal weights (ours).
+                 When fewer than half of the top videos have a channel median, breakouts is left out,
+                 the mean is of the other two, and `confidence` is "low".
+  demand         the median views of the top videos: what the best in the niche get. A niche under
+                 --demand-floor (default 10,000, ours) is listed below the others as too small to
+                 rank on openness: an open niche nobody watches is not an opportunity.
+
+Ranking: niches at or over the floor by openness, ties by demand; then those under the floor; then
+those that could not be measured. `same_results` names term pairs whose top results are at least half
+the same videos: one audience, not two niches.
+
+Search numbers are reported under `search` and do not rank: Labs volume and kd_web (--labs), the
+Trends YouTube index (--trends; pass --anchor, a term put into every request, so indices of different
+requests share the first request's scale), and yt_competition, our heuristic for the fight over
+the search results. They tell how much a niche is searched, which matters for search-led formats and
+little for browse-led ones.
 
 Prints {"ok": true, "niches": [...ranked], "same_results": [...], ...}. A refusal exits 2.
 Standard library only: Python 3.11.
@@ -35,8 +43,10 @@ Standard library only: Python 3.11.
 from __future__ import annotations
 
 import argparse
+import json
 import statistics
 import sys
+from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -47,10 +57,14 @@ sys.path.insert(0, str(HERE))
 
 import normalize  # noqa: E402
 import yt_competition  # noqa: E402
-from ytskills import scoring  # noqa: E402
 from ytskills.common import Refusal, run as run_main  # noqa: E402
 
-SAME_RESULTS_SHARE = 0.5   # half of the smaller top list shared: the two queries surface one audience
+BREAKOUT_MULTIPLE = 3.0          # youtube-strategy thresholds.md: outlier line
+SMALL_CHANNEL_BELOW = 100_000    # thresholds.md: under "large"
+MIN_VIDEOS_FOR_MEDIAN = 5        # channel_baselines.py: fewer gives no trustworthy median
+FRESH_DAYS = 365
+DEMAND_FLOOR = 10_000            # ours: median views of the top results
+SAME_RESULTS_SHARE = 0.5         # half of the smaller top list shared: one audience
 
 
 def _load(path: str) -> dict[str, Any]:
@@ -70,6 +84,19 @@ def _as_of_now(as_of: str | None) -> datetime | None:
     return datetime(d.year, d.month, d.day, tzinfo=timezone.utc) + timedelta(hours=12)
 
 
+def load_baselines(path: str | None) -> dict[str, dict[str, Any]]:
+    if not path:
+        return {}
+    try:
+        doc = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        raise Refusal(f"cannot read --baselines: {e}") from None
+    channels = doc.get("channels") if isinstance(doc, dict) else None
+    if not isinstance(channels, dict):
+        raise Refusal("--baselines is not youtube-data channel_baselines.py output (no 'channels')")
+    return channels
+
+
 def labs_metrics(paths: list[str], errors: list[dict[str, Any]]) -> tuple[dict[str, dict[str, Any]], float]:
     out: dict[str, dict[str, Any]] = {}
     cost = 0.0
@@ -86,7 +113,7 @@ def labs_metrics(paths: list[str], errors: list[dict[str, Any]]) -> tuple[dict[s
 
 def trends_interest(paths: list[str], anchor: str | None, errors: list[dict[str, Any]],
                     warnings: list[str]) -> tuple[dict[str, float], bool, float]:
-    """yt_interest per term on one scale, whether it is comparable across terms, and the cost."""
+    """yt_interest per term on one scale, whether it compares across terms, and the cost."""
     batches: list[dict[str, float]] = []
     cost = 0.0
     for path in paths:
@@ -100,13 +127,11 @@ def trends_interest(paths: list[str], anchor: str | None, errors: list[dict[str,
             values = normalize.trends(result, [], [], warnings)
             if values:
                 batches.append({normalize.term_key(k): float(v) for k, v in values.items()})
-    if not batches:
-        return {}, True, cost
-    if len(batches) == 1:
-        return batches[0], True, cost
+    if len(batches) <= 1:
+        return (batches[0] if batches else {}), True, cost
     if not anchor:
         warnings.append(f"Trends came in {len(batches)} requests without an --anchor: their indices are on "
-                        "different scales, so yt_interest is reported but not used for demand")
+                        "different scales and do not compare across requests")
         merged: dict[str, float] = {}
         for b in batches:
             for k, v in b.items():
@@ -122,44 +147,83 @@ def trends_interest(paths: list[str], anchor: str | None, errors: list[dict[str,
     comparable = True
     for i, b in enumerate(batches):
         if b[key] <= 0:
-            warnings.append(f"the anchor reads 0 in Trends request {i + 1}; its terms cannot be rescaled and "
-                            "are left out of demand")
+            warnings.append(f"the anchor reads 0 in Trends request {i + 1}; its terms cannot be rescaled")
             comparable = False
             continue
-        factor = reference / b[key]
         for k, v in b.items():
             # Rescaled values may pass 100: the scale is the first request's, not each request's own.
-            merged.setdefault(k, round(v * factor, 1))
+            merged.setdefault(k, round(v * reference / b[key], 1))
     return merged, comparable, cost
 
 
+def openness(videos: list[dict[str, Any]], now: datetime,
+             baselines: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    n = len(videos)
+    by_channel = Counter(v.get("channel_id") or f"?{i}" for i, v in enumerate(videos))
+    top3 = sum(c for _, c in by_channel.most_common(3)) / n
+    ages = [a for a in (yt_competition.age_days(v, now) for v in videos) if a is not None]
+    fresh = sum(a <= FRESH_DAYS for a in ages) / len(ages) if ages else None
+
+    measured, breakouts = 0, []
+    for v in videos:
+        b = baselines.get(v.get("channel_id") or "")
+        views = v.get("views")
+        if not b or not isinstance(views, (int, float)) or (b.get("videos_read") or 0) < MIN_VIDEOS_FOR_MEDIAN \
+                or not b.get("median_views"):
+            continue
+        measured += 1
+        multiple = views / b["median_views"]
+        subs = b.get("subscribers")
+        if multiple >= BREAKOUT_MULTIPLE and subs is not None and subs < SMALL_CHANNEL_BELOW:
+            breakouts.append({"video_id": v.get("video_id"), "title": v.get("title"), "channel": b.get("title"),
+                              "subscribers": subs, "views": views, "channel_median": b["median_views"],
+                              "multiple": round(multiple, 1)})
+    coverage = measured / n
+    breakout_share = len(breakouts) / measured if measured else None
+    parts = {"breakouts": breakout_share if coverage >= 0.5 else None,
+             "spread": 1 - top3, "freshness": fresh}
+    used = [v for v in parts.values() if v is not None]
+    breakouts.sort(key=lambda b: -b["multiple"])
+    return {
+        "openness": round(100 * statistics.fmean(used), 1) if used else None,
+        "confidence": "normal" if parts["breakouts"] is not None and fresh is not None else "low",
+        "parts": {k: (round(v, 3) if v is not None else None) for k, v in parts.items()},
+        "top3_channel_share": round(top3, 3),
+        "distinct_channels": len(by_channel),
+        "fresh_share": round(fresh, 3) if fresh is not None else None,
+        "breakout_share": round(breakout_share, 3) if breakout_share is not None else None,
+        "baseline_coverage": round(coverage, 3),
+        "breakouts": breakouts[:5],
+    }
+
+
 def run(argv: list[str] | None = None) -> dict[str, Any]:
-    p = argparse.ArgumentParser(description="Rank niche candidates by demand and competition (see the file's docstring).")
+    p = argparse.ArgumentParser(description="Rank niche candidates by openness to a new channel (see the file's docstring).")
     p.add_argument("--serp", action="append", default=[], help="YouTube organic SERP response, one task per niche term (repeatable)")
+    p.add_argument("--baselines", help="youtube-data channel_baselines.py output for the channels in the SERPs")
+    p.add_argument("--demand-floor", type=float, default=DEMAND_FLOOR,
+                   help=f"median views of the top results a niche needs to be ranked on openness (default {DEMAND_FLOOR})")
     p.add_argument("--labs", action="append", default=[], help="Labs keyword_overview response for the same terms (repeatable)")
     p.add_argument("--trends", action="append", default=[], help="Trends explore response, type=youtube (repeatable)")
     p.add_argument("--anchor", help="the term present in every Trends request, to put them on one scale")
-    p.add_argument("--channels", action="append", default=[], help="youtube-data `channels` output for subscriber counts")
     p.add_argument("--top", type=int, default=yt_competition.TOP, help="top results read per niche (default 20)")
     p.add_argument("--as-of", help="count ages to this day, YYYY-MM-DD (default: each SERP's datetime)")
     a = p.parse_args(argv)
     if not a.serp:
         raise Refusal("pass --serp: every niche is a term with its YouTube results")
-    if a.top < 1:
-        raise Refusal("--top must be at least 1")
+    if a.top < 1 or a.demand_floor < 0:
+        raise Refusal("--top must be at least 1 and --demand-floor not negative")
     fixed_now = _as_of_now(a.as_of)
+    baselines = load_baselines(a.baselines)
 
     errors: list[dict[str, Any]] = []
     warnings: list[str] = []
     labs, cost = labs_metrics(a.labs, errors)
     interest, interest_comparable, trends_cost = trends_interest(a.trends, a.anchor, errors, warnings)
     cost += trends_cost
-    try:
-        subs = yt_competition.subscribers_from(a.channels)
-    except yt_competition.Refusal as e:
-        raise Refusal(str(e)) from None
+    subs = {cid: b["subscribers"] for cid, b in baselines.items() if isinstance(b.get("subscribers"), int)}
 
-    niches: dict[str, dict[str, Any]] = {}
+    out: list[dict[str, Any]] = []
     top_ids: dict[str, set[str]] = {}
     for path in a.serp:
         doc = _load(path)
@@ -170,65 +234,50 @@ def run(argv: list[str] | None = None) -> dict[str, Any]:
             raise Refusal(str(e)) from None
         for task in tasks:
             term = normalize.term_key(task["keyword"] or "")
-            if not term or term in niches:
+            if not term or term in top_ids:
                 if term:
                     warnings.append(f"{term!r} has more than one SERP; the first one is used")
                 continue
             now = fixed_now or yt_competition.parse_when(task["datetime"]) or datetime.now(timezone.utc)
             videos = yt_competition.videos_from_serp(task["items"])[:a.top]
-            comp = yt_competition.score(term, videos, now, subs, a.top)
             top_ids[term] = {v["video_id"] for v in videos if v.get("video_id")}
-            ranked = []
-            for v in videos:
-                age = yt_competition.age_days(v, now)
-                if age is not None and isinstance(v.get("views"), (int, float)):
-                    ranked.append({"video_id": v.get("video_id"), "title": v.get("title"),
-                                   "channel_id": v.get("channel_id"),
-                                   "views_per_day": round(v["views"] / max(age, 1.0), 1)})
-            ranked.sort(key=lambda r: -r["views_per_day"])
-            niches[term] = {"term": term, "competition": comp, "top_videos": ranked[:3]}
+            comp = yt_competition.score(term, videos, now, subs, a.top)
+            row: dict[str, Any] = {"term": term, "n_videos": len(videos)}
+            if not videos:
+                row["unmeasured"] = "no videos in the results"
+            else:
+                row.update(openness(videos, now, baselines))
+                row["demand"] = {"median_views": comp.get("median_views"),
+                                 "median_views_per_day": comp.get("median_views_per_day"),
+                                 "below_floor": (comp.get("median_views") or 0) < a.demand_floor}
+            row["search"] = {"volume": labs.get(term, {}).get("volume"), "kd_web": labs.get(term, {}).get("kd_web"),
+                             "yt_interest": interest.get(term),
+                             "yt_competition": comp.get("yt_competition") if videos else None,
+                             "yt_competition_parts": comp.get("components")}
+            out.append(row)
 
-    if not niches:
+    if not out:
         raise Refusal("no successful SERP task in the input")
-    for extra in sorted((set(labs) | set(interest)) - set(niches) - {normalize.term_key(a.anchor or "")}):
+    if not baselines:
+        warnings.append("no --baselines: breakouts cannot be measured, openness is spread and freshness only "
+                        "(run youtube-data channel_baselines.py on the same SERP files)")
+    for extra in sorted((set(labs) | set(interest)) - set(top_ids) - {normalize.term_key(a.anchor or "")}):
         warnings.append(f"{extra!r} has Labs or Trends data but no SERP; it is not ranked as a niche")
 
-    out = []
-    for term, n in niches.items():
-        comp = n["competition"]
-        volume = labs.get(term, {}).get("volume")
-        kd_web = labs.get(term, {}).get("kd_web")
-        yt_interest = interest.get(term)
-        dem = scoring.demand(volume, yt_interest if interest_comparable else None)
-        opp = scoring.opportunity(comp["yt_competition"] if comp["n_videos"] else None, kd_web)
+    for row in out:
         overlaps = []
+        mine = top_ids[row["term"]]
         for other, ids in top_ids.items():
-            if other == term or not top_ids[term] or not ids:
-                continue
-            shared = len(top_ids[term] & ids)
-            if shared:
-                overlaps.append({"term": other, "shared_videos": shared,
-                                 "share": round(shared / min(len(top_ids[term]), len(ids)), 3)})
-        overlaps.sort(key=lambda o: -o["share"])
-        row: dict[str, Any] = {
-            "term": term,
-            "niche_score": round(scoring.measured_score(dem[0], opp[0]), 1) if dem and opp else None,
-            "demand": {"tier": dem[0] if dem else None, "basis": dem[1] if dem else None,
-                       "volume": volume, "yt_interest": yt_interest, "kd_web": kd_web},
-            "opportunity": {"value": round(opp[0], 2) if opp else None, "basis": opp[1] if opp else None},
-            "competition": {k: comp.get(k) for k in ("yt_competition", "confidence", "components", "weights",
-                                                      "n_videos", "median_subscribers", "subscribers_known")},
-            "now": {"median_views_per_day": comp.get("median_views_per_day"),
-                    "median_age_days": comp.get("median_age_days"),
-                    "shorts_share": comp.get("shorts_share"), "top_videos": n["top_videos"]},
-            "overlap": overlaps,
-        }
-        if not dem:
-            row["unscored"] = "no demand measured: pass --labs (keyword_overview) or --trends for this term"
-        elif not opp:
-            row["unscored"] = "no competition: the SERP had no videos and Labs has no kd_web"
-        out.append(row)
-    out.sort(key=lambda r: (r["niche_score"] is None, -(r["niche_score"] or 0), r["term"]))
+            if other != row["term"] and mine and ids and mine & ids:
+                shared = len(mine & ids)
+                overlaps.append({"term": other, "shared_videos": shared, "share": round(shared / min(len(mine), len(ids)), 3)})
+        row["overlap"] = sorted(overlaps, key=lambda o: -o["share"])
+
+    def order(r: dict[str, Any]) -> tuple:
+        if r.get("openness") is None:
+            return (2, 0, 0, r["term"])
+        return (1 if r["demand"]["below_floor"] else 0, -r["openness"], -(r["demand"]["median_views"] or 0), r["term"])
+    out.sort(key=order)
     for i, r in enumerate(out, 1):
         r["rank"] = i
 
@@ -242,16 +291,15 @@ def run(argv: list[str] | None = None) -> dict[str, Any]:
                 if share >= SAME_RESULTS_SHARE:
                     same.append({"terms": [t1, t2], "shared_videos": shared, "share": round(share, 3)})
     same.sort(key=lambda s: -s["share"])
-    if not any(r["competition"]["subscribers_known"] for r in out):
-        warnings.append("no subscriber counts: competition is traffic and targeting only (pass --channels "
-                        "from youtube-data once the channel is connected)")
 
     return {"ok": True, "as_of": a.as_of, "niches": out, "same_results": same,
+            "rules": {"breakout": f">= {BREAKOUT_MULTIPLE:g}x the channel's median, channel under {SMALL_CHANNEL_BELOW:,} subscribers",
+                      "fresh": f"published within {FRESH_DAYS} days", "demand_floor": a.demand_floor,
+                      "openness": "mean of breakouts, 1 - top-3 channel share, freshness; equal weights (ours)"},
             "interest_comparable": interest_comparable, "cost_usd": round(cost, 6),
             "errors": errors, "warnings": warnings,
-            "note": "niche_score weighs measured demand against measured competition (0-100); "
-                    "volume is Google web search volume, yt_interest a relative index; terms in "
-                    "same_results surface mostly the same videos and are one audience"}
+            "note": "ranked by openness among niches at or over the demand floor; search numbers are reported, "
+                    "not ranked; terms in same_results surface mostly the same videos and are one audience"}
 
 
 def _run_reading(argv: list[str] | None) -> dict[str, Any]:

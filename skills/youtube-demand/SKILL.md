@@ -1,6 +1,6 @@
 ---
 name: youtube-demand
-description: Keyword demand for a YouTube channel through DataForSEO — Google web search volume, CPC, web keyword difficulty and intent (Labs), YouTube search interest index (Google Trends type=youtube), rising related queries, competition in the YouTube top 20 (our formula over the YouTube SERP), and niche candidates ranked by both; calls go through scripts/dfs.py. Use when a step chooses a niche (demand against competition, niches.py) or measures or expands seed keywords (Onboarding seed set, weekly Recon keyword research and rising queries, Planning's keywords for repackaging) and writes `seed` records.
+description: Keyword demand for a YouTube channel through DataForSEO — Google web search volume, CPC, web keyword difficulty and intent (Labs), YouTube search interest index (Google Trends type=youtube), rising related queries, competition in the YouTube top 20 (our formula over the YouTube SERP), and niche candidates ranked by how open they are to a new channel; calls go through scripts/dfs.py. Use when a step chooses a niche (openness: breakouts, spread, freshness — niches.py) or measures or expands seed keywords (Onboarding seed set, weekly Recon keyword research and rising queries, Planning's keywords for repackaging) and writes `seed` records.
 ---
 
 # YouTube demand
@@ -95,7 +95,7 @@ Weekly budget guide for one channel (demand review): ~30 seeds → about $0.2–
 | Need | Command |
 | --- | --- |
 | Call DataForSEO and save the response | `python3 <base>/scripts/dfs.py post\|get <path> [--data JSON \| --data-file F] --out F` |
-| Niche candidates ranked by demand and competition | `python3 <base>/scripts/niches.py --serp F [--serp F2 ...] [--labs F] [--trends F ...] [--anchor TERM] [--channels F] --as-of YYYY-MM-DD` |
+| Niche candidates ranked by openness, demand as a floor | `python3 <base>/scripts/niches.py --serp F [--serp F2 ...] --baselines F [--demand-floor N] [--labs F] [--trends F ... --anchor TERM] --as-of YYYY-MM-DD` |
 | Saved responses → `seed` rows | `python3 <base>/scripts/normalize.py --labs F [--labs F2] [--trends F] [--serp F] [--channels F] [--only TERM ...] --as-of YYYY-MM-DD` |
 | Competition alone | `python3 <base>/scripts/yt_competition.py --serp F [--channels F]` or `--videos F --keyword K` |
 
@@ -116,23 +116,28 @@ DataForSEO SERP (pass ids in search-rank order).
 
 ## `niches.py` — choosing a niche
 
-A sub-genre many people watch is not one a new channel can enter: the most watched are held by the
-biggest channels. `niches.py` scores each niche term on both sides with the tiers the idea score
-uses (`lib/ytskills/scoring.py`): demand 0–5 from Labs volume or the Trends index, opportunity
-`5 × (1 − yt_competition)`, and `niche_score` 0–100 in the idea score's ratio between the two (0.25
-to 0.20). Give it, for the same 8–15 terms:
+Popularity is not what makes a niche hard. YouTube matches videos to each viewer and gives new
+channels a slot on the home page; a popular niche whose top is spread out and fresh is the best case,
+because its demand is proven. A niche is hard when a few incumbents hold the top, when the top is
+old, and when small channels never break through (niche research, 2026-11-05: YouTube's Trends tab
+"Breakout videos", Galloway, vidIQ, 1of10, TubeBuddy all read it this way). `niches.py` measures
+exactly those three over each niche term's YouTube top 20 and ranks by them:
 
-1. one SERP file per term (`/v3/serp/youtube/organic/live/advanced`);
-2. one Labs `keyword_overview` file for all the terms (volume, kd_web);
-3. Trends compare files of up to 5 terms each, **with the same anchor term in every request** —
-   usually the owner's broad topic — and `--anchor <that term>`. Indices of different requests are
-   on different scales; the anchor puts them on the first request's scale. Without it the script
-   reports the indices but does not use them for demand.
+| Part | Measure | Line (youtube-strategy thresholds.md) |
+| --- | --- | --- |
+| breakouts | share of top videos ≥ 3× their own channel's median, from channels under 100 k subscribers | outlier ≥ 3× median; "large" from 100 k |
+| spread | 1 − the share held by the three channels with most videos in the top | — |
+| freshness | share of top videos published within 365 days | — |
 
-Read per niche `niche_score`, `demand`, `opportunity`, `competition` (with its parts) and `now`
-(median views per day and the top three videos — what the niche pulls today). `same_results` lists
-term pairs whose top results are at least half the same videos: one audience, not two niches.
-A niche with no measured demand is listed with `unscored` and is not ranked by guesswork.
+`openness` 0–100 is their mean (equal weights, ours). Demand is the median views of the top — what
+the best in the niche get — and works as a floor (10 000 by default, ours): a niche under it is
+listed after the others. Search numbers (`--labs`, `--trends` with `--anchor`, and `yt_competition`)
+are reported under `search` and do not rank.
+
+Breakouts need each channel's median: run youtube-data `channel_baselines.py` on the same SERP
+files first (public pages through yt-dlp, no token). Without it, openness is spread and freshness
+only and `confidence` says "low". `same_results` lists term pairs whose top results are at least half
+the same videos: one audience, not two niches.
 
 ## `yt_competition` — the formula (a heuristic)
 
@@ -154,9 +159,9 @@ The anchors (100 views, 10M views, 1k–10M subscribers) are our choices, not Yo
 
 ## Which recipe uses what
 
-- **Onboarding (1)**: niche check — SERP, `keyword_overview` and anchored Trends compare on the 8–15
-  niche terms, then `niches.py` (step 1); then the initial seed set → `seed` records
-  (`--source dataforseo`, step 6).
+- **Onboarding (1)**: niche check — a SERP per niche term, youtube-data `channel_baselines.py` on
+  them, then `niches.py` (step 1); then the initial seed set → `seed` records (`--source dataforseo`,
+  step 6).
 - **Recon (3)**: rising queries per main seed (Trends queries list) → measure with Labs → new
   `seed` records in Recon's own memory; SERP for competition of the week's candidates. Recon never
   rewrites a record in Onboarding's memory (one writer per record; see youtube-records).

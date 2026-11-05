@@ -1,8 +1,7 @@
-"""Demand and opportunity on a 0-5 scale, shared by every score that ranks by them.
+"""Demand and opportunity of a keyword on a 0-5 scale, for every score that ranks by them.
 
-The idea score (youtube-strategy score_idea.py) and the niche score (youtube-demand niches.py) both
-weigh measured demand against measured competition. They read the same tiers from here, so a niche
-and the ideas inside it are ranked by one rule, and changing a tier changes both.
+Today the idea score (youtube-strategy score_idea.py) is the one user; the tiers live here so that a
+second keyword score reads the same ones instead of a copy.
 
   volume tier    Google web monthly searches: 0 -> 0, 1-99 -> 1, 100-999 -> 2, 1k-9.9k -> 3,
                  10k-99.9k -> 4, >=100k -> 5
@@ -19,8 +18,7 @@ from __future__ import annotations
 
 import math
 
-# The measured part of the idea score. The niche score keeps the same ratio between the two, so a
-# niche is ranked the way its ideas will be.
+# The measured part of the idea score; the judged part (fit, packaging, feasibility) is its own.
 DEMAND_WEIGHT = 0.25
 OPPORTUNITY_WEIGHT = 0.20
 
@@ -59,8 +57,3 @@ def opportunity(yt_competition: float | None, kd_web: float | None) -> tuple[flo
         return 5 * (1 - kd_web / 100), "kd_web (web proxy)"
     return None
 
-
-def measured_score(demand_tier: float, opportunity_value: float) -> float:
-    """0-100 from demand and opportunity alone, in the idea score's ratio between them."""
-    total = DEMAND_WEIGHT + OPPORTUNITY_WEIGHT
-    return 20 * (DEMAND_WEIGHT * demand_tier + OPPORTUNITY_WEIGHT * opportunity_value) / total

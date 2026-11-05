@@ -13,16 +13,22 @@ searchable answers to a need; **Hero** — a tentpole made to reach new people.
 Cadence below is a sustainable starting point for one creator, not a growth promise: consistency
 beats volume, and a cadence the channel cannot keep is worse than a lower one.
 
-| Slug | In one line | Hub / Help | Hero per quarter | Main surface |
+**Main surface is a hypothesis, not a measurement.** It was carried over from the upstream templates,
+which give no source for it (no published taxonomy of channel types with traffic mixes exists, from
+YouTube or a named practitioner — niche research, 2026-11-05), and `music-artist` is ours. Nothing
+ranks by it: niche choice is by openness (youtube-demand `niches.py`). Replace it with the channel's
+own traffic sources (`analytics.py traffic`) once they exist.
+
+| Slug | In one line | Hub / Help | Hero per quarter | Main surface (hypothesis) |
 | --- | --- | --- | --- | --- |
 | `education` | explainers and how-tos that teach a subject | 35 / 65 | 1 | search, suggested |
 | `tutorial` | step-by-step fixes and walkthroughs for a tool or skill | 25 / 75 | 1 | search |
 | `entertainment` | challenges, sketches, reactions made to be watched for fun | 85 / 15 | 2 | browse, suggested |
-| `vlog` | the creator's life as a story | 80 / 20 | 1–2 | browse, subscriptions |
+| `vlog` | the creator's life as a story | 80 / 20 | 1–2 | subscriptions, suggested |
 | `review` | is this product worth it, A vs B, best of | 35 / 65 | 1 (launch-day) | search |
 | `commentary` | opinion and analysis on news and culture | 70 / 30 | 1–2 | browse, suggested |
 | `niche-authority` | deep expertise in one domain (finance, law, B2B) | 35 / 65 | 1 | search, suggested |
-| `personal-brand` | the creator as the brand, several formats, one positioning | 60 / 40 | 1–2 | browse, search |
+| `personal-brand` | the creator as the brand, several formats, one positioning | 60 / 40 | 1–2 | browse, suggested, search |
 | `shorts-first` | mainly vertical short videos in recognisable series | 80 / 20 | 1–2 | Shorts feed |
 | `music-artist` | an artist's releases and the life around them | 70 / 30 | 1 per release cycle | browse, suggested, search for names |
 

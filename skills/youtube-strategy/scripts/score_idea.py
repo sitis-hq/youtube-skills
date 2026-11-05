@@ -6,7 +6,7 @@ the agent against the anchored rubric in references/ideation.md:
 
   demand       computed: max(volume tier, interest tier), from lib/ytskills/scoring.py
   opportunity  computed: 5 * (1 - yt_competition); without it 5 * (1 - kd_web / 100), marked as a
-               web proxy (lib/ytskills/scoring.py, shared with youtube-demand niches.py).
+               web proxy (lib/ytskills/scoring.py).
   fit          judged: how squarely the idea sits in a content pillar and the channel's identity.
   packaging    judged: whether hook, title-with-keyword and thumbnail concept are each clear in a line.
   feasibility  judged: whether the channel can make it at its cadence and resources.

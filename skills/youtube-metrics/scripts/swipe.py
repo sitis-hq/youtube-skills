@@ -9,7 +9,7 @@
 # patterns alone; hooks.json sits next to this file instead of in a sibling skill.
 """Rank videos by how far each beat — or fell short of — its OWN channel's median views.
 
-  swipe.py videos.json                         outliers upward, 1.5x the channel median or more
+  swipe.py videos.json                         outliers upward, 3x the channel median or more
   swipe.py videos.json --direction down        under-performers, 0.5x or less
   swipe.py videos.json --direction both --min 2 --max 0.4
 
@@ -104,7 +104,8 @@ def main(argv: list[str] | None = None) -> dict[str, Any]:
                                 formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__)
     p.add_argument("videos", help="a JSON file of videos")
     p.add_argument("--direction", choices=["up", "down", "both"], default="up")
-    p.add_argument("--min", type=float, default=1.5, help="upward: multiple at or above this (1.5)")
+    p.add_argument("--min", type=float, default=3.0,
+                   help="upward: multiple at or above this (3, the outlier line of youtube-strategy thresholds.md)")
     p.add_argument("--max", type=float, default=0.5, help="downward: multiple at or below this (0.5)")
     p.add_argument("--lang", default="en", help="the titles' language; formulas exist for en only")
     a = p.parse_args(argv)

@@ -168,6 +168,7 @@ A row cites `<brief>: <steps>`. "Planned" names the brief that will run the scri
 | `youtube-data` | `data_api.py` | 1: 11, 18 |
 | `youtube-data` | `analytics.py` | 1: 18 |
 | `youtube-data` | `reporting.py` | 1: 11 |
+| `youtube-data` | `channel_baselines.py` | 1: 1 |
 | `youtube-data` | `transcript.py` | planned: 3, 4 |
 | `youtube-data` | `thumbnails.py` | planned: 3 |
 | `youtube-metrics` | `ypp.py` | 1: 18 |
