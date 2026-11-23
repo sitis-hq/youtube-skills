@@ -6,6 +6,7 @@ import struct
 import sys
 import tempfile
 import unittest
+import urllib.parse
 import zlib
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -66,7 +67,8 @@ def jpeg(w, h):
 class FakeApi:
     """Stands in for the Data API: keeps a channel's brandingSettings and answers by URL."""
 
-    def __init__(self, branding=None, errors=None, apply_update=True, banner=None):
+    def __init__(self, branding=None, errors=None, apply_update=True, banner=None, lag=0,
+                 playlists=None, refuse_videos=()):
         self.branding = branding if branding is not None else {
             "channel": {"title": "Artist", "description": "old", "keywords": "music \"lo fi\"",
                         "trackingAnalyticsAccountId": "UA-1"},
@@ -75,6 +77,12 @@ class FakeApi:
         self.apply_update = apply_update
         self.banner = {"url": BANNER_URL} if banner is None else banner
         self.calls = []
+        # Reads of brandingSettings that still answer the state before the last write: YouTube's
+        # read side lagging its write side.
+        self.lag = lag
+        self.stale = None
+        self.playlists = dict(playlists or {})  # title -> {"id", "videos"}
+        self.refuse_videos = set(refuse_videos)
 
     def __call__(self, method, url, headers, body):
         name = url.split("?")[0].rsplit("/v3/", 1)[1]
@@ -87,17 +95,42 @@ class FakeApi:
         if name == "channels" and method == "GET":
             item = {"id": CHANNEL}
             if "brandingSettings" in url:
-                item["brandingSettings"] = json.loads(json.dumps(self.branding))
+                shown = self.branding
+                if self.lag and self.stale is not None:
+                    self.lag -= 1
+                    shown = self.stale
+                item["brandingSettings"] = json.loads(json.dumps(shown))
             return 200, json.dumps({"items": [item]}).encode()
         if name == "channels" and method == "PUT":
             sent = json.loads(body)
             if self.apply_update:
+                self.stale = self.branding
                 self.branding = sent["brandingSettings"]
             return 200, json.dumps(sent).encode()
         if name == "channelBanners/insert":
             return 200, json.dumps(self.banner).encode()
         if name == "watermarks/set":
             return 204, b""
+        if name == "playlists" and method == "GET":
+            items = [{"id": p["id"], "snippet": {"title": t}} for t, p in self.playlists.items()]
+            return 200, json.dumps({"items": items}).encode()
+        if name == "playlists" and method == "POST":
+            sent = json.loads(body)
+            new = {"id": "PL" + str(len(self.playlists) + 1), "videos": [], "sent": sent}
+            self.playlists[sent["snippet"]["title"]] = new
+            return 200, json.dumps({"id": new["id"]}).encode()
+        if name == "playlistItems" and method == "POST":
+            snip = json.loads(body)["snippet"]
+            video = snip["resourceId"]["videoId"]
+            if video in self.refuse_videos:
+                return 404, json.dumps({"error": {"errors": [{"reason": "videoNotFound"}], "message": "x"}}).encode()
+            next(p for p in self.playlists.values() if p["id"] == snip["playlistId"])["videos"].append(video)
+            return 200, json.dumps({"id": "item"}).encode()
+        if name == "playlistItems" and method == "GET":
+            pid = urllib.parse.parse_qs(url.split("?", 1)[1])["playlistId"][0]
+            videos = next(p for p in self.playlists.values() if p["id"] == pid)["videos"]
+            items = [{"snippet": {"resourceId": {"videoId": v}}} for v in videos]
+            return 200, json.dumps({"items": items}).encode()
         raise AssertionError(f"unexpected call {method} {url}")
 
     def names(self):
@@ -113,11 +146,13 @@ class Base(unittest.TestCase):
         stub.chmod(stub.stat().st_mode | stat.S_IEXEC)
         self.stub = stub
         os.environ["AI_INTEGRATION_BIN"] = str(stub)
-        self.saved = (apply_channel.http, apply_channel.access_token)
+        self.saved = (apply_channel.http, apply_channel.access_token, apply_channel.SLEEP)
         apply_channel.access_token = lambda connection: TOKEN
+        self.slept = []
+        apply_channel.SLEEP = self.slept.append
 
     def tearDown(self):
-        apply_channel.http, apply_channel.access_token = self.saved
+        apply_channel.http, apply_channel.access_token, apply_channel.SLEEP = self.saved
         os.environ.pop("AI_INTEGRATION_BIN", None)
         self.dir.cleanup()
 
@@ -194,6 +229,16 @@ class Branding(Base):
         self.assertTrue(out["uncertain"])
         self.assertEqual(out["intent"], "claimed")
         self.assertEqual(self.intent_calls(), ["claim-intent"])
+        # Only after every wait: one read, then one per wait.
+        self.assertEqual(self.slept, list(apply_channel.REREAD_WAITS))
+        self.assertIn("4 re-reads", out["error"])
+
+    def test_a_lagging_re_read_is_waited_out_and_the_change_committed(self):
+        api = FakeApi(lag=2)
+        code, out = self.run_cli(api, "branding", "--desired", self.desired({"description": "new"}), *IDS)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.slept, list(apply_channel.REREAD_WAITS[:2]))
+        self.assertEqual(self.intent_calls(), ["claim-intent", "commit-intent"])
 
     def test_a_5xx_leaves_the_claim_open(self):
         original = FakeApi()
@@ -274,6 +319,22 @@ class Banner(Base):
         self.assertEqual(out["units_used"], 50 + 1 + 50 + 1)
         self.assertEqual(self.intent_calls(), ["claim-intent", "commit-intent"])
 
+    def test_a_banner_url_the_api_shows_late_is_committed(self):
+        # As on 2026-11-06: the banner was live while channels.list still answered the old url.
+        api = FakeApi(lag=1)
+        code, out = self.run_cli(api, "banner", "--image", self.file("b.png", png(2560, 1440)), *IDS)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.slept, [apply_channel.REREAD_WAITS[0]])
+        self.assertEqual(out["banner_url"], BANNER_URL)
+
+    def test_a_banner_url_never_shown_points_at_studio(self):
+        api = FakeApi(lag=99)
+        code, out = self.run_cli(api, "banner", "--image", self.file("b.png", png(2560, 1440)), *IDS)
+        self.assertEqual(code, 2)
+        self.assertTrue(out["uncertain"])
+        self.assertIn("Studio", out["check"])
+        self.assertEqual(self.intent_calls(), ["claim-intent"])
+
     def test_a_jpeg_header_is_read_too(self):
         info = apply_channel.check_banner(self.file("b.jpg", jpeg(2048, 1152)))
         self.assertEqual((info["mime"], info["width"], info["height"]), ("image/jpeg", 2048, 1152))
@@ -345,6 +406,69 @@ class Watermark(Base):
                                  "--timing", "offsetFromStart", "--offset-ms", "0", *IDS)
         self.assertTrue(out["uncertain"])
         self.assertEqual(self.intent_calls(), ["claim-intent"])
+
+
+
+V = ["aaaaaaaaaa1", "bbbbbbbbbb2", "ccccccccc_3"]
+
+
+class Playlist(Base):
+    def spec(self, **over):
+        value = {"title": "Dark Southern Lane", "description": "d", "privacy": "public", "videos": V, **over}
+        return self.desired(value)
+
+    def test_a_playlist_is_created_with_its_videos_in_order(self):
+        api = FakeApi()
+        code, out = self.run_cli(api, "playlist", "--spec", self.spec(), *IDS)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["key"], "playlist:create:dark-southern-lane")
+        made = api.playlists["Dark Southern Lane"]
+        self.assertEqual(made["videos"], V)
+        self.assertEqual(made["sent"]["status"]["privacyStatus"], "public")
+        self.assertEqual(api.names(), [("GET", "playlists"), ("POST", "playlists")] +
+                         [("POST", "playlistItems")] * 3 + [("GET", "playlistItems")])
+        self.assertEqual(out["units_used"], 1 + 50 + 3 * 50 + 1)
+        self.assertEqual(self.intent_calls(), ["claim-intent", "commit-intent"])
+
+    def test_a_title_the_channel_already_has_is_not_created_again(self):
+        api = FakeApi(playlists={"Dark Southern Lane": {"id": "PLowner", "videos": []}})
+        code, out = self.run_cli(api, "playlist", "--spec", self.spec(), *IDS)
+        self.assertEqual(code, 0, out)
+        self.assertEqual((out["acted"], out["playlist_id"]), (False, "PLowner"))
+        self.assertEqual(api.names(), [("GET", "playlists")])
+        self.assertEqual(self.intent_calls(), [])
+
+    def test_a_refused_video_leaves_the_claim_open_and_names_it(self):
+        api = FakeApi(refuse_videos={V[1]})
+        code, out = self.run_cli(api, "playlist", "--spec", self.spec(), *IDS)
+        self.assertEqual(code, 2)
+        self.assertTrue(out["uncertain"])
+        self.assertEqual([r["video"] for r in out["refused"]], [V[1]])
+        self.assertEqual(api.playlists["Dark Southern Lane"]["videos"], [V[0], V[2]])
+        self.assertEqual(self.intent_calls(), ["claim-intent"])
+
+    def test_a_refused_playlist_fails_the_intent(self):
+        api = FakeApi()
+        real = api.__call__
+
+        def refuse_insert(method, url, headers, body):
+            if method == "POST" and url.split("?")[0].endswith("/playlists"):
+                api.calls.append({"method": method, "name": "playlists"})
+                return 400, json.dumps({"error": {"errors": [{"reason": "invalidPlaylistSnippet"}],
+                                                  "message": "bad"}}).encode()
+            return real(method, url, headers, body)
+        code, out = self.run_cli(refuse_insert, "playlist", "--spec", self.spec(), *IDS)
+        self.assertEqual(code, 2)
+        self.assertEqual(out["intent"], "failed")
+        self.assertEqual(self.intent_calls(), ["claim-intent", "fail-intent"])
+
+    def test_a_spec_is_checked_before_any_call(self):
+        for bad in ({"privacy": "friends"}, {"videos": [V[0], V[0]]}, {"videos": ["nope"]}, {"title": " "},
+                    {"videos": []}, {"color": "red"}):
+            api = FakeApi()
+            code, out = self.run_cli(api, "playlist", "--spec", self.spec(**bad), *IDS)
+            self.assertEqual(code, 2, bad)
+            self.assertEqual(api.calls, [], bad)
 
 
 if __name__ == "__main__":

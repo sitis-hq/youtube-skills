@@ -22,6 +22,7 @@ recipe's point of view: it goes through an intent reservation, and browser work 
 | Made for kids (channel default) | `status.selfDeclaredMadeForKids` | Settings → Channel → Advanced | legal declaration (COPPA); never guess, ask the owner if unclear |
 | Trailer for non-subscribers | `apply_channel.py branding` (`brandingSettings.channel.unsubscribedTrailer`) | Customization → Layout | |
 | Featured video for subscribers | — | Customization → Layout | |
+| Playlists behind the shelves | `apply_channel.py playlist` (`playlists.insert`, then `playlistItems.insert` per video) | Content → Playlists | create them before the home sections that show them |
 | Home sections | `channelSections.*` (≤ 10 shelves) — not scripted | Customization → Layout | apply with `youtube-studio/references/home-tab.md`; verify the result on the page (`home-page.md`) |
 | Banner | `apply_channel.py banner`: `channelBanners.insert` (16:9, ≥ 2048×1152, ≤ 6 MB, JPEG/PNG, 50 units), then `channels.update` with `brandingSettings.image.bannerExternalUrl` = the returned url | Customization → Branding | `banner_preview.py` output fits these limits |
 | Profile picture | — | Customization → Branding | `avatar_preview.py` output; apply with `youtube-studio/references/channel-profile.md` |

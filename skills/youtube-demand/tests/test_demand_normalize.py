@@ -138,5 +138,46 @@ class Refusals(unittest.TestCase):
         self.assertEqual(run()[0], 2)
 
 
+def trends_file(tmp: str, name: str, values: dict) -> str:
+    kws = list(values)
+    doc = {"status_code": 20000, "cost": 0.011, "tasks": [{
+        "id": name, "status_code": 20000, "data": {"type": "youtube"},
+        "result": [{"keywords": kws, "items": [{"type": "google_trends_graph", "keywords": kws,
+                                                 "averages": [values[k] for k in kws], "data": []}]}]}]}
+    path = Path(tmp) / f"{name}.json"
+    path.write_text(json.dumps(doc), encoding="utf-8")
+    return str(path)
+
+
+class TrendsOnOneScale(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+
+    def test_two_requests_without_an_anchor_are_refused(self):
+        # A seed's yt_interest is read later without its request; two scales side by side would lie.
+        a = trends_file(self.tmp.name, "a", {"honky tonk": 68, "outlaw country": 65})
+        b = trends_file(self.tmp.name, "b", {"texas country": 73, "alt country": 1})
+        code, out = run("--trends", a, "--trends", b, "--as-of", "2026-11-05")
+        self.assertEqual(code, 2)
+        self.assertIn("--anchor", out["error"])
+
+    def test_an_anchor_puts_every_request_on_one_scale_with_the_top_at_100(self):
+        a = trends_file(self.tmp.name, "a", {"outlaw country": 50, "honky tonk": 80})
+        b = trends_file(self.tmp.name, "b", {"outlaw country": 25, "texas country": 60})
+        code, out = run("--trends", a, "--trends", b, "--anchor", "outlaw country", "--as-of", "2026-11-05")
+        self.assertEqual(code, 0, out)
+        rows = by_term(out)
+        # texas country rescales to 120 on request a's scale; the set is then divided so it reads 100.
+        self.assertEqual({t: rows[t]["yt_interest"] for t in rows},
+                         {"texas country": 100, "honky tonk": 67, "outlaw country": 42})
+
+    def test_one_request_needs_no_anchor(self):
+        a = trends_file(self.tmp.name, "a", {"honky tonk": 68, "outlaw country": 65})
+        code, out = run("--trends", a, "--as-of", "2026-11-05")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(by_term(out)["honky tonk"]["yt_interest"], 68)
+
+
 if __name__ == "__main__":
     unittest.main()

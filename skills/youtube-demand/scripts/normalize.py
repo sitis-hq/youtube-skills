@@ -8,6 +8,7 @@ as it came, and passes the files here:
   --labs FILE     /v3/dataforseo_labs/google/{keyword_overview,keyword_ideas,related_keywords}/live,
                   or the fallback /v3/keywords_data/google_ads/search_volume/... (repeatable)
   --trends FILE   /v3/keywords_data/google_trends/explore/... with "type": "youtube" (repeatable)
+  --anchor TERM   the term put into every Trends request; required with more than one request
   --serp FILE     /v3/serp/youtube/organic/.../advanced (repeatable) -> yt_competition
   --channels FILE youtube-data `channels` output, subscriber counts for yt_competition
 
@@ -17,9 +18,11 @@ Units, as the records contract states them:
   cpc            USD.
   kd_web         DataForSEO keyword_difficulty 0-100, as it comes — a web metric, not YouTube.
   yt_interest    Google Trends YouTube-search interest, the mean of the term's series over the
-                 requested range, 0-100. Relative: comparable only between terms of the SAME request
-                 (up to 5 keywords share one scale). A term asked alone is scaled to its own peak, so its
-                 mean says how steady interest was, not how large.
+                 requested range, 0-100. Relative: a request (up to 5 keywords) has its own scale, so
+                 several requests are put on one with --anchor (`one_scale`): every term of the set
+                 then compares with every other, and the set's highest term reads 100. A term asked
+                 alone is scaled to its own peak, so its mean says how steady interest was, not how
+                 large.
   yt_competition our 0..1 heuristic from the YouTube top 20 (yt_competition.py).
 
 Prints {"ok": true, "rows": [...], "related": [...], "trends_batches": [...], "cost_usd": ...}.
@@ -166,6 +169,47 @@ def trends(result: dict[str, Any], batches: list[list[str]], related: list[dict[
     return interest
 
 
+def one_scale(batches: list[dict[str, float]], anchor: str | None,
+              warnings: list[str]) -> tuple[dict[str, float], bool]:
+    """Put the Trends requests' indices on one scale; say whether they compare across terms.
+
+    Up to 5 keywords share one request's scale, and a request is scaled to its own peak, so the same
+    number means different interest in different requests. An anchor — one term put into every
+    request — fixes that: each request is multiplied so the anchor reads as in the first request.
+    Then the whole set is divided so its highest term reads 100, keeping the index within 0-100 (the
+    `seed` record's range) while every pair of terms keeps its ratio. One request needs no anchor.
+    """
+    if len(batches) <= 1:
+        return (dict(batches[0]) if batches else {}), True
+    if not anchor:
+        warnings.append(f"Trends came in {len(batches)} requests without an --anchor: their indices are on "
+                        "different scales and do not compare across requests")
+        merged: dict[str, float] = {}
+        for b in batches:
+            for k, v in b.items():
+                merged.setdefault(k, v)
+        return merged, False
+    key = term_key(anchor)
+    missing = [i + 1 for i, b in enumerate(batches) if key not in b]
+    if missing:
+        raise Refusal(f"--anchor {anchor!r} is not in Trends request(s) {missing}: put the anchor term into "
+                      "every request, or the requests cannot be put on one scale")
+    reference = batches[0][key]
+    merged = {}
+    comparable = True
+    for i, b in enumerate(batches):
+        if b[key] <= 0:
+            warnings.append(f"the anchor reads 0 in Trends request {i + 1}; its terms cannot be rescaled "
+                            "and are left out")
+            comparable = False
+            continue
+        for k, v in b.items():
+            merged.setdefault(k, v * reference / b[key])
+    top = max(merged.values(), default=0)
+    factor = 100 / top if top > 100 else 1
+    return {k: round(v * factor, 1) for k, v in merged.items()}, comparable
+
+
 def require_youtube_trends(doc: dict[str, Any], path: str) -> None:
     for task in doc.get("tasks") or []:
         ttype = (task.get("data") or {}).get("type", "web")
@@ -197,6 +241,7 @@ def run(argv: list[str] | None = None) -> dict[str, Any]:
     p.add_argument("--trends", action="append", default=[], help="Google Trends explore response, type=youtube (repeatable)")
     p.add_argument("--serp", action="append", default=[], help="YouTube organic SERP response (repeatable)")
     p.add_argument("--channels", action="append", default=[], help="youtube-data `channels` output for subscriber counts")
+    p.add_argument("--anchor", help="the term put into EVERY Trends request; required with more than one request")
     p.add_argument("--as-of", help="the day the numbers were read, YYYY-MM-DD (default: today, UTC)")
     p.add_argument("--source", default="dataforseo",
                    help="the seed's source for rows with Labs data (default dataforseo); Trends-only rows get 'trends'")
@@ -226,17 +271,27 @@ def run(argv: list[str] | None = None) -> dict[str, Any]:
 
     related: list[dict[str, Any]] = []
     batches: list[list[str]] = []
+    measured: list[dict[str, float]] = []
     for path in a.trends:
         doc = load(path)
         cost += float(doc.get("cost") or 0)
         require_youtube_trends(doc, path)
         for result in results(doc, path, errors):
-            for kw, value in trends(result, batches, related, warnings).items():
-                key = term_key(kw)
-                if key in rows:
-                    rows[key].setdefault("yt_interest", value)
-                else:
-                    rows[key] = {"term": key, "source": "trends", "yt_interest": value}
+            values = trends(result, batches, related, warnings)
+            if values:
+                measured.append({term_key(k): float(v) for k, v in values.items()})
+    if len(measured) > 1 and not a.anchor:
+        # A seed's yt_interest is read later without its request: numbers from two requests written
+        # side by side would look comparable and are not.
+        raise Refusal(f"{len(measured)} Trends requests are on {len(measured)} scales: put one anchor term into "
+                      "every request and pass --anchor <term>")
+    interest, _ = one_scale(measured, a.anchor, warnings)
+    for key, value in interest.items():
+        value = max(0, min(100, round(value)))
+        if key in rows:
+            rows[key].setdefault("yt_interest", value)
+        else:
+            rows[key] = {"term": key, "source": "trends", "yt_interest": value}
 
     channels = yt_competition.subscribers_from(a.channels) if a.channels else {}
     competition = []

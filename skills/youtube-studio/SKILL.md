@@ -42,7 +42,8 @@ Verbs and their keys (`intent.py key --help`): `reply|pin|heart|hide|report --co
 `branding --part banner|avatar --file` → keyed by the image's content; `watermark --file --timing
 offsetFromEnd:15000[:5000]` → keyed by the image and its timing;
 `settings --area channel|upload-defaults|home-tab --state-file` and `metadata --video-id --state-file`
-→ keyed by the desired state's canonical JSON. A key not built by `key` is refused.
+→ keyed by the desired state's canonical JSON. `playlist --title` → `playlist:create:<slug>`: the title is the
+playlist's identity, and youtube-channel-setup's `apply_channel.py playlist` builds the key itself. A key not built by `key` is refused.
 
 `claim/commit/fail` take the run's ids from the `Process id` and `Project id` lines of
 `current-task.md` (or `--spec-template-id`, `--project-id`). Claim answers: `act: true` → do it once;

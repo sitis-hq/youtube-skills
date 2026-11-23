@@ -112,13 +112,14 @@ A step declares exactly the keys it uses, with `declare-cred-key` on that step.
 
 | Key | Kind | Who sets it | Used for |
 | --- | --- | --- | --- |
-| `YOUTUBE_CLIENT_SECRET` | secret | the owner uploads the OAuth client JSON on the project's Credentials page (Onboarding step 10) | the YouTube connection |
+| `YOUTUBE_CLIENT_SECRET` | secret | the owner uploads the OAuth client JSON on the project's Credentials page (Onboarding step 10) | the YouTube connection; a step that declares it learns whether it is held, never its value |
 | `YOUTUBE_REFRESH_TOKEN` | secret | the worker, when the owner completes the Connect dialog (Onboarding step 11) | every API step; `ai-integration oauth-token --connection YOUTUBE` needs it declared |
 | `GOOGLE_SESSION` | session | the owner signs in once in the worker's browser | Google Cloud console and Google Auth Platform |
 | `YT_STUDIO_SESSION` | session | the owner signs in once at **`studio.youtube.com`** in the worker's browser | every Studio step; its browser tools are `mcp__playwright-yt-studio__*` |
 | `DATAFORSEO_LOGIN`, `DATAFORSEO_PASSWORD` | secret | the owner, from DataForSEO's API Access page (not the website password) | `dataforseo-mcp-server` |
 | `POYO_API_KEY` | secret | the owner | `poyo` image generation |
 | `LINK_<NAME>` (e.g. `LINK_SPOTIFY`, `LINK_APPLE_MUSIC`, `LINK_INSTAGRAM`, `LINK_WEBSITE`) | config | Onboarding step 13, with `update-project-credentials` | links a recipe must put into descriptions or the About page |
+| `BUSINESS_EMAIL` | config | Onboarding step 13, with `update-project-credentials` | the channel's business contact, for the About page and descriptions |
 
 If a declared key is missing when the step runs, the run pauses and asks the owner for it. A step
 never works around a missing key.
@@ -183,7 +184,7 @@ A row cites `<brief>: <steps>`. "Planned" names the brief that will run the scri
 | `youtube-strategy` | `score_idea.py` | planned: 3 |
 | `youtube-channel-setup` | `banner_preview.py` | 1: 12 |
 | `youtube-channel-setup` | `avatar_preview.py` | 1: 12 |
-| `youtube-channel-setup` | `apply_channel.py` | 1: 16 |
+| `youtube-channel-setup` | `apply_channel.py` | 1: 16, 17 |
 | `youtube-metadata` | `check_metadata.py` | 1: 13 |
 | `youtube-community` | `comments.py` | planned: 6 |
 | `youtube-studio` | `intent.py` | 1: 16, 17 |

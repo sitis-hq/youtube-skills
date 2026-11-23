@@ -68,14 +68,14 @@ attached to the recipe, as rule 2 says.
 | 7 | Create the channel | owner + AI | — | `GOOGLE_SESSION` | `channel-created.md`, `profile:channel` record |
 | 8 | Google Cloud project and APIs | AI (browser) | — | `GOOGLE_SESSION` | `gcp-setup-notes.md`, `admin-drift.md` |
 | 9 | OAuth application to production | AI (browser) | — | `GOOGLE_SESSION` | `oauth-consent-notes.md`, `admin-drift.md` |
-| 10 | OAuth client and `YOUTUBE_CLIENT_SECRET` | AI (browser) + owner | — | `GOOGLE_SESSION` | `oauth-client-notes.md` |
+| 10 | OAuth client and `YOUTUBE_CLIENT_SECRET` | AI (browser) + owner | — | `GOOGLE_SESSION`, `YOUTUBE_CLIENT_SECRET` | `oauth-client-notes.md` |
 | 11 | Connect the channel, Studio session, Reporting job | owner + AI | `youtube-data`, `youtube-studio` | `YOUTUBE_REFRESH_TOKEN`, `YT_STUDIO_SESSION` | `connection-check.md` |
 | 12 | Banner and avatar | AI + owner approval | `youtube-channel-setup`, `poyoapi`, `opencv-python-headless` | `POYO_API_KEY` | chosen images, previews, `asset-decision.md` |
 | 13 | Channel copy and links | AI + owner approval | `youtube-channel-setup`, `youtube-metadata` | — | `channel-copy.md`, `LINK_*` config credentials |
 | 14 | Home page plan | AI | `youtube-channel-setup` | — | `home-plan.md` |
 | 15 | Channel settings (desired state) | AI | `youtube-channel-setup` | — | `channel-settings.json`, `upload-defaults.md` |
 | 16 | Apply branding | AI | `youtube-channel-setup`, `youtube-studio`, `opencv-python-headless` | `YOUTUBE_REFRESH_TOKEN`, `YT_STUDIO_SESSION` | `branding-apply-report.md` |
-| 17 | Apply settings, home page, upload defaults | AI | `youtube-channel-setup`, `youtube-studio` | `YOUTUBE_REFRESH_TOKEN`, `YT_STUDIO_SESSION` | `settings-apply-report.md` |
+| 17 | Apply settings, home page, upload defaults | AI | `youtube-channel-setup`, `youtube-studio` | `YOUTUBE_REFRESH_TOKEN`, `YT_STUDIO_SESSION` | playlists, `settings-apply-report.md` |
 | 18 | Monetization readiness | AI | `youtube-metrics`, `youtube-strategy`, `youtube-data` | `YOUTUBE_REFRESH_TOKEN` | `monetization-checklist.md` |
 
 ## Design notes per step
@@ -152,19 +152,24 @@ Validator rubric:
 - The owner confirms the name and the identity tokens.
 
 **6 — Seed keywords.**
+Every seed carries every measure: a seed without its interest index or its competition cannot be
+ranked against the others later.
+
 1. Call Labs `keyword_ideas` / `keyword_overview` for volume, CPC, KD and intent, with
-   `youtube-demand: scripts/dfs.py`, which saves each response as a file.
-2. Call Trends explore with `type: youtube` for the interest index, the same way. For rising
-   queries, call it with exactly one keyword.
-3. Call the YouTube SERP for the main terms, the same way: `normalize.py` turns it into
-   `yt_competition`.
-4. Run `youtube-demand: scripts/normalize.py` on them. Each row it prints carries the arguments for
-   `records.py write seed`; write every row.
+   `youtube-demand: scripts/dfs.py`, which saves each response as a file. Choose the seed set.
+2. Call Trends explore with `type: youtube` for **every** seed, the same way: up to 5 keywords a
+   request, and the same anchor term in every request (the chosen niche's main term) beside 4 seeds.
+   For rising queries, call it with exactly one keyword.
+3. Call the YouTube SERP for **every** seed, the same way: `normalize.py` turns it into
+   `yt_competition` (about $0.002 a seed).
+4. Run `youtube-demand: scripts/normalize.py` on them with `--anchor <that term>`. It puts every
+   request on one scale and refuses several requests without an anchor. Each row it prints carries
+   the arguments for `records.py write seed`; write every row.
 5. Write `seed-keywords.json`, mirroring what was written.
 
 Validator rubric:
 - at least 20 seeds;
-- every seed has `as_of` and `source`;
+- every seed has `as_of` and `source`, and every seed has `yt_interest` and `yt_competition`;
 - `kd_web` is on 0–100;
 - no seed is a duplicate under a different spelling.
 
@@ -187,8 +192,11 @@ Validator rubric:
 - Step 9 requests the scopes `youtube`, `youtube.force-ssl`, `yt-analytics.readonly` and
   `yt-analytics-monetary.readonly`, then publishes the app to production. An app left in testing
   gets refresh tokens that live 7 days.
-- Step 10 creates a Desktop-app OAuth client. The owner uploads its JSON on the project's
-  Credentials page, in the "Connect to YouTube" row. The agent never sees the secret.
+- Step 10 declares `YOUTUBE_CLIENT_SECRET` to learn whether the project already holds it: the run's
+  `current-task.md` lists a held connection half without its value, or names it as missing. Held →
+  check the Desktop-app client in the console and ask the owner nothing. Missing → create a
+  Desktop-app OAuth client; the owner uploads its JSON on the project's Credentials page, in the
+  "Connect to YouTube" row. The agent never sees the secret.
 - Every difference from the expected screens goes into `admin-drift.md`.
 
 **11 — Connect, Studio session, Reporting job.**
@@ -230,6 +238,11 @@ Validator rubric:
 **14 — Home page plan.**
 - Follow `youtube-channel-setup/references/home-page.md`: sections from the content pillars, the
   trailer for non-subscribers, and the featured video.
+- For every playlist a shelf needs, write its spec for step 17: `playlist-<slug>.json` with
+  `title`, `description`, `privacy` and `videos` — the channel's existing uploads, in order. A
+  playlist that needs videos the channel does not have yet is planned for later, not specced.
+- A trailer the channel does not have is not made here: making a video belongs to the content
+  recipes. Name an existing upload as the interim trailer.
 
 **15 — Channel settings.**
 1. Produce `channel-settings.json`, the desired state of `brandingSettings.channel`: description,
@@ -249,7 +262,11 @@ Validator rubric:
 3. Report every action with its intent key and outcome.
 
 **17 — Apply settings, home page, upload defaults.**
-- Set up the home sections with `youtube-studio/references/home-tab.md`.
+- First create the planned playlists, one `youtube-channel-setup: scripts/apply_channel.py playlist
+  --spec <playlist-….json>` each. The script claims, creates, adds the videos, re-reads and commits;
+  a title the channel already has is not created again.
+- Then set up the home sections with `youtube-studio/references/home-tab.md`, including the
+  shelves of those playlists.
 - Set the upload defaults with `upload-defaults.md`.
 - Each change is its own `intent.py` claim, verb `settings`, with area `home-tab` or
   `upload-defaults`.

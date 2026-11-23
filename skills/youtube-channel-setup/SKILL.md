@@ -56,12 +56,14 @@ yes; uploading is an irreversible action (see `references/settings.md`).
 ## Applying
 
 After the owner's yes, the API half is one script; each command claims its intent key itself
-(`settings:channel:<desired state>`, `branding:banner|watermark:<file>`), so a repeated run skips.
+(`settings:channel:<desired state>`, `branding:banner|watermark:<file>`, `playlist:create:<title>`),
+so a repeated run skips.
 
 ```bash
 python3 <base>/scripts/apply_channel.py branding --desired <desired.json> [--dry-run]
 python3 <base>/scripts/apply_channel.py banner --image <artifact dir>/banner/banner-upload.jpg
 python3 <base>/scripts/apply_channel.py watermark --image <mark.png> --timing offsetFromEnd --offset-ms 15000 [--duration-ms N]
+python3 <base>/scripts/apply_channel.py playlist --spec <playlist.json>
 ```
 
 - `desired.json` holds only the fields to set, out of `description` (≤ 1,000 characters),
@@ -70,10 +72,16 @@ python3 <base>/scripts/apply_channel.py watermark --image <mark.png> --timing of
   differed and nothing was claimed. Run `--dry-run` first and show the owner the diff.
 - The banner must already fit YouTube's limits (`banner_preview.py` output does); a watermark is a
   square PNG/JPEG, ≥ 150×150, under 1 MB. Both are refused before any claim otherwise.
+- `playlist.json` is `{"title", "description"?, "privacy": "public"|"unlisted"|"private", "videos":
+  [ids in order]}` — one file per playlist of the home plan (`references/home-page.md` → "Playlists to
+  create"). The title is the playlist's identity: a channel that already has a playlist with that
+  title gets nothing new, and the output names the existing one.
+- A re-read that does not show the change yet is repeated after 5, 15 and 30 s: YouTube's read side
+  can lag a write (a banner was live in Studio while the API still answered the old url).
 - `"uncertain": true` → do not retry; check the channel on YouTube and tell the owner.
   `"fallback": "studio"` → the connection lacks the scope: do it with the named playbook.
 - Pass `--spec-template-id` and `--project-id`, or run where `current-task.md` names them. The
-  output reports `units_used` (channels.list 1, each write 50).
+  output reports `units_used` (each read 1, each write 50; a playlist of N videos costs 2 + 50·(N+1)).
 
 Home sections and the profile picture are not here: they stay with the Studio playbooks
 (`youtube-studio/references/home-tab.md`, `youtube-studio/references/channel-profile.md`).

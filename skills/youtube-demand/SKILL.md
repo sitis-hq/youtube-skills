@@ -12,7 +12,11 @@ description: Keyword demand for a YouTube channel through DataForSEO — Google 
 - `yt_interest` is **Google Trends with `type: "youtube"`**: a relative index 0–100, not a count.
   Up to 5 keywords in one request share one scale; values from different requests do not compare.
   A keyword asked alone is scaled to its own peak, so its number says how steady interest was, not
-  how large. Put the terms you want ranked against each other in the same request.
+  how large. For more than 5 terms, put ONE anchor term (usually the broad topic) into every
+  request, 4 other terms beside it, and pass `--anchor <term>` to `normalize.py` / `niches.py`: they
+  rescale every request to the first one's and divide the set so its highest term reads 100.
+  `normalize.py` refuses several requests without an anchor, because a seed's `yt_interest` is read
+  later without the request it came from.
 - `kd_web` is DataForSEO's keyword difficulty 0–100, built from link profiles of the top 10 **web**
   pages — a weak proxy for YouTube. Record it as it comes; never rescale it.
 - `yt_competition` is **ours**: a 0..1 heuristic from the YouTube top 20 (below). Treat it as a
@@ -96,7 +100,7 @@ Weekly budget guide for one channel (demand review): ~30 seeds → about $0.2–
 | --- | --- |
 | Call DataForSEO and save the response | `python3 <base>/scripts/dfs.py post\|get <path> [--data JSON \| --data-file F] --out F` |
 | Niche candidates ranked by openness, demand as a floor | `python3 <base>/scripts/niches.py --serp F [--serp F2 ...] --baselines F [--demand-floor N] [--labs F] [--trends F ... --anchor TERM] --as-of YYYY-MM-DD` |
-| Saved responses → `seed` rows | `python3 <base>/scripts/normalize.py --labs F [--labs F2] [--trends F] [--serp F] [--channels F] [--only TERM ...] --as-of YYYY-MM-DD` |
+| Saved responses → `seed` rows | `python3 <base>/scripts/normalize.py --labs F [--labs F2] [--trends F ... --anchor TERM] [--serp F ...] [--channels F] [--only TERM ...] --as-of YYYY-MM-DD` |
 | Competition alone | `python3 <base>/scripts/yt_competition.py --serp F [--channels F]` or `--videos F --keyword K` |
 
 `normalize.py` merges all files by term (lowercased) and prints `rows` (only the `seed` fields,

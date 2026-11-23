@@ -127,32 +127,10 @@ def trends_interest(paths: list[str], anchor: str | None, errors: list[dict[str,
             values = normalize.trends(result, [], [], warnings)
             if values:
                 batches.append({normalize.term_key(k): float(v) for k, v in values.items()})
-    if len(batches) <= 1:
-        return (batches[0] if batches else {}), True, cost
-    if not anchor:
-        warnings.append(f"Trends came in {len(batches)} requests without an --anchor: their indices are on "
-                        "different scales and do not compare across requests")
-        merged: dict[str, float] = {}
-        for b in batches:
-            for k, v in b.items():
-                merged.setdefault(k, v)
-        return merged, False, cost
-    key = normalize.term_key(anchor)
-    missing = [i + 1 for i, b in enumerate(batches) if key not in b]
-    if missing:
-        raise Refusal(f"--anchor {anchor!r} is not in Trends request(s) {missing}: put the anchor term into "
-                      "every request, or the requests cannot be put on one scale")
-    reference = batches[0][key]
-    merged = {}
-    comparable = True
-    for i, b in enumerate(batches):
-        if b[key] <= 0:
-            warnings.append(f"the anchor reads 0 in Trends request {i + 1}; its terms cannot be rescaled")
-            comparable = False
-            continue
-        for k, v in b.items():
-            # Rescaled values may pass 100: the scale is the first request's, not each request's own.
-            merged.setdefault(k, round(v * reference / b[key], 1))
+    try:
+        merged, comparable = normalize.one_scale(batches, anchor, warnings)
+    except normalize.Refusal as e:
+        raise Refusal(str(e)) from None
     return merged, comparable, cost
 
 
