@@ -12,13 +12,15 @@ relies on come from one commit and cannot drift apart.
 | # | Brief | Runs | Reads from |
 | --- | --- | --- | --- |
 | 1 | [Onboarding](01-onboarding.md) | once per channel, by hand | — |
-| 2 | Daily data | daily | Onboarding, Recon |
-| 3 | Recon, trends and ideas | weekly | Onboarding, Daily data |
-| 4 | Analytics | weekly | Onboarding, Daily data, Recon, creation recipes |
-| 5 | Planning and optimization | monthly | Onboarding, Daily data, Recon, Analytics |
-| 6 | Community | weekdays | Onboarding |
+| 2 | [Daily data](02-daily-data.md) | daily | Onboarding, Recon |
+| 3 | [Recon, trends and ideas](03-recon.md) | weekly, Monday | Onboarding, Daily data, Community, Planning, creation recipes |
+| 4 | [Analytics](04-analytics.md) | weekly, Tuesday (a day after Recon) | Onboarding, Daily data, Recon, Planning, creation recipes |
+| 5 | [Planning and optimization](05-planning.md) | monthly | Onboarding, Daily data, Recon, Analytics, creation recipes |
+| 6 | [Community](06-community.md) | weekdays | Onboarding |
 
-Briefs 2–6 are written after the Onboarding recipe has been built and run once.
+The exact recipe names, which the briefs use to find each other: "YouTube Onboarding", "YouTube Daily
+data", "YouTube Recon", "YouTube Analytics", "YouTube Planning", "YouTube Community". A creation
+recipe (such as "Create Music Release") publishes videos and writes `publish` records.
 
 ## Rules every recipe of the set follows
 
@@ -106,6 +108,12 @@ A recipe reads another recipe's memory or files only after declaring it.
 The run context then gives the producer's id, and deleting the producer warns that this recipe
 breaks.
 
+A recipe never reads another it has not declared, not even by finding it by name. When a producer
+does not exist yet as the reader is built (the briefs are built in order 2 → 6), the reader is built
+without that read and treats the producer as absent, saying so in its run. The producer's brief then
+tells the editor to add the `declare-read` to each earlier reader it names, so the set is complete
+once the last brief is built.
+
 ### 6. Credentials
 
 A step declares exactly the keys it uses, with `declare-cred-key` on that step.
@@ -130,7 +138,7 @@ A session or a link is never written into a record or an artifact.
 
 Some actions on the channel cannot be undone: an upload, an update, a reply, a pin, a post, a change
 of settings. Every such action goes through `youtube-studio: scripts/intent.py`, either directly or
-through a script that calls it (`apply_channel.py`, `comments.py`).
+through a script that calls it (`apply_channel.py`, `apply_video.py`, `comments.py`).
 
 - The script claims the action before doing it and commits it after.
 - If an earlier run already committed the action, the step skips it and says so.
@@ -156,36 +164,36 @@ the step's artifacts, not how the step was done.
 
 ## Scripts and the steps that run them
 
-A row cites `<brief>: <steps>`. "Planned" names the brief that will run the script once written.
-"Inside" means another script runs it, and no step calls it directly.
+A row cites `<brief>: <steps>`. "Inside" means another script runs it, and no step calls it directly.
 
 | Skill | Script | Run by |
 | --- | --- | --- |
-| `youtube-records` | `records.py` | 1: 6, 7 |
-| `youtube-demand` | `dfs.py` | 1: 1, 3, 6 |
-| `youtube-demand` | `niches.py` | 1: 1 |
-| `youtube-demand` | `normalize.py` | 1: 6 |
-| `youtube-demand` | `yt_competition.py` | inside `niches.py` and `normalize.py`; planned: 3 |
-| `youtube-data` | `data_api.py` | 1: 11, 18 |
-| `youtube-data` | `analytics.py` | 1: 18 |
-| `youtube-data` | `reporting.py` | 1: 11 |
-| `youtube-data` | `channel_baselines.py` | 1: 1 |
-| `youtube-data` | `transcript.py` | planned: 3, 4 |
-| `youtube-data` | `thumbnails.py` | planned: 3 |
-| `youtube-metrics` | `ypp.py` | 1: 18 |
-| `youtube-metrics` | `velocity.py` | planned: 2 |
-| `youtube-metrics` | `candidates.py` | planned: 3 |
-| `youtube-metrics` | `swipe.py` | planned: 3, 4 |
-| `youtube-metrics` | `retention.py` | planned: 4 |
-| `youtube-metrics` | `deadair.py` | planned: 4 |
-| `youtube-metrics` | `title.py` | planned: 3, 5 |
-| `youtube-metrics` | `chapters.py` | planned: 5 |
-| `youtube-thumbnail-check` | `analyze_thumbnail.py` | planned: 3, 4 |
-| `youtube-strategy` | `score_idea.py` | planned: 3 |
-| `youtube-channel-setup` | `banner_preview.py` | 1: 12 |
+| `youtube-channel-setup` | `apply_channel.py` | 1: 16, 17; 5: 7, 8 |
 | `youtube-channel-setup` | `avatar_preview.py` | 1: 12 |
-| `youtube-channel-setup` | `apply_channel.py` | 1: 16, 17 |
-| `youtube-metadata` | `check_metadata.py` | 1: 13 |
-| `youtube-community` | `comments.py` | planned: 6 |
-| `youtube-studio` | `intent.py` | 1: 16, 17 |
-| `youtube-studio` | `studio_reach.py` | planned: 2 |
+| `youtube-channel-setup` | `banner_preview.py` | 1: 12 |
+| `youtube-community` | `comments.py` | 6: 1, 6 |
+| `youtube-data` | `analytics.py` | 1: 18; 4: 2, 3, 4, 6, 7; 5: 5 |
+| `youtube-data` | `channel_baselines.py` | 1: 1; 3: 9 |
+| `youtube-data` | `data_api.py` | 1: 11, 18; 2: 1; 3: 2, 4, 5, 10; 4: 4, 5, 11; 5: 1, 5 |
+| `youtube-data` | `reporting.py` | 1: 11; 2: 3; 4: 6; 5: 5 |
+| `youtube-data` | `thumbnails.py` | 3: 8; 5: 6, 8 |
+| `youtube-data` | `transcript.py` | 3: 7; 4: 7; 5: 6 |
+| `youtube-demand` | `dfs.py` | 1: 1, 3, 6; 3: 2, 3, 10; 5: 6 |
+| `youtube-demand` | `niches.py` | 1: 1; 3: 9 |
+| `youtube-demand` | `normalize.py` | 1: 6; 3: 3, 10; 5: 6 |
+| `youtube-demand` | `yt_competition.py` | inside `niches.py` and `normalize.py` |
+| `youtube-metadata` | `apply_video.py` | 5: 7, 8 |
+| `youtube-metadata` | `check_metadata.py` | 1: 13; 5: 4, 6 |
+| `youtube-metrics` | `candidates.py` | 3: 4 |
+| `youtube-metrics` | `chapters.py` | 5: 6 |
+| `youtube-metrics` | `deadair.py` | 4: 8 |
+| `youtube-metrics` | `retention.py` | 4: 8; 5: 5 |
+| `youtube-metrics` | `swipe.py` | 3: 6, 7; 4: 9; 5: 5 |
+| `youtube-metrics` | `title.py` | 3: 11; 4: 9; 5: 4, 6 |
+| `youtube-metrics` | `velocity.py` | 2: 2 |
+| `youtube-metrics` | `ypp.py` | 1: 18; 4: 4 |
+| `youtube-records` | `records.py` | 1: 6, 7; 2: 1, 2, 3; 3: 1, 4, 10, 11; 4: 1; 5: 1, 2, 4; 6: 1, 6, 7 |
+| `youtube-strategy` | `score_idea.py` | 3: 11; 5: 3 |
+| `youtube-studio` | `intent.py` | 1: 16, 17; 5: 9; 6: 6, 7 |
+| `youtube-studio` | `studio_reach.py` | 2: 3 |
+| `youtube-thumbnail-check` | `analyze_thumbnail.py` | 3: 8; 5: 6 |

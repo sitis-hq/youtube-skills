@@ -71,7 +71,7 @@ attached to the recipe, as rule 2 says.
 | 10 | OAuth client and `YOUTUBE_CLIENT_SECRET` | AI (browser) + owner | — | `GOOGLE_SESSION`, `YOUTUBE_CLIENT_SECRET` | `oauth-client-notes.md` |
 | 11 | Connect the channel, Studio session, Reporting job | owner + AI | `youtube-data`, `youtube-studio` | `YOUTUBE_REFRESH_TOKEN`, `YT_STUDIO_SESSION` | `connection-check.md` |
 | 12 | Banner and avatar | AI + owner approval | `youtube-channel-setup`, `poyoapi`, `opencv-python-headless` | `POYO_API_KEY` | chosen images, previews, `asset-decision.md` |
-| 13 | Channel copy and links | AI + owner approval | `youtube-channel-setup`, `youtube-metadata` | — | `channel-copy.md`, `LINK_*` config credentials |
+| 13 | Channel copy and links | AI + owner approval | `youtube-channel-setup`, `youtube-metadata` | — | `channel-copy.md`, `LINK_*` and `BUSINESS_EMAIL` config credentials |
 | 14 | Home page plan | AI | `youtube-channel-setup` | — | `home-plan.md` |
 | 15 | Channel settings (desired state) | AI | `youtube-channel-setup` | — | `channel-settings.json`, `upload-defaults.md` |
 | 16 | Apply branding | AI | `youtube-channel-setup`, `youtube-studio`, `opencv-python-headless` | `YOUTUBE_REFRESH_TOKEN`, `YT_STUDIO_SESSION` | `branding-apply-report.md` |
@@ -231,8 +231,9 @@ Validator rubric:
 1. Write the About text with `youtube-channel-setup/references/channel-copy.md`: keyword-aware,
    from the step's own `seed` records, and at most 1,000 characters.
 2. Lint the description part with `youtube-metadata: scripts/check_metadata.py` where it applies.
-3. Ask the owner for the channel's links: streaming, socials, site.
-4. Store each one with `update-project-credentials` as a `LINK_<NAME>` config credential.
+3. Ask the owner for the channel's links (streaming, socials, site) and its business e-mail.
+4. Store each link with `update-project-credentials` as a `LINK_<NAME>` config credential, and the
+   e-mail as `BUSINESS_EMAIL`. A value the project already holds is kept unless the owner changes it.
 5. The owner approves the final copy.
 
 **14 — Home page plan.**
@@ -251,6 +252,10 @@ Validator rubric:
 2. Produce `upload-defaults.md` and the made-for-kids decision.
 
 **16 — Apply branding.**
+
+Onboarding applies the channel's first state once. After "YouTube Planning" has run, channel changes
+are Planning's: do not re-run steps 16–17, whose desired state is older and would undo Planning's.
+
 1. Apply the approved banner, the watermark (if the brand profile has one) and
    `channel-settings.json` through `youtube-channel-setup: scripts/apply_channel.py`.
    - `banner` uploads the approved banner image.
@@ -275,7 +280,9 @@ Validator rubric:
 **18 — Monetization readiness.**
 1. Read the channel's numbers:
    - subscribers, with `youtube-data: scripts/data_api.py channels --mine`;
-   - watch hours over 365 days and views over 90 days, with `youtube-data: scripts/analytics.py channel`;
+   - watch hours over 365 days, with `youtube-data: scripts/analytics.py channel`, and Shorts-feed
+     views over 90 days, the `SHORTS` row of `youtube-data: scripts/analytics.py traffic` (the
+     input `ypp.py` names; Analytics reads it the same way);
    - public uploads in 90 days, with `youtube-data: scripts/data_api.py uploads`.
    A new channel reads zero; the step writes zero, not "no data".
 2. Run `youtube-metrics: scripts/ypp.py` with them.
