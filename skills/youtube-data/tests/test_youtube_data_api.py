@@ -287,5 +287,93 @@ class Reporting(Patched):
             reporting.parse_reach_csv(REACH_CSV, "fraction")
 
 
+
+COMBINED_CSV = ("date,channel_id,video_id,traffic_source_type,traffic_source_detail,operating_system,device_type,"
+                "video_thumbnail_impressions,video_thumbnail_impressions_ctr\n"
+                f"20261101,UC{'a' * 22},{vid(1)},3,SUBSCRIPTIONS,1,104,1000,6.0\n"
+                f"20261101,UC{'a' * 22},{vid(1)},3,SUBSCRIPTIONS,2,101,1000,2.0\n"
+                f"20261101,UC{'a' * 22},{vid(1)},3,WHAT_TO_WATCH,1,104,2000,3.0\n"
+                f"20261102,UC{'a' * 22},{vid(1)},5,,1,104,500,10.0\n"
+                f"20261102,UC{'a' * 22},{vid(2)},7,,1,104,100,1.0\n")
+
+
+class ReportingJobs(Patched):
+    def test_ensure_job_creates_only_the_missing_one(self):
+        def handler(m, path, q, b):
+            if m == "GET" and path.endswith("/jobs"):
+                return {"jobs": [{"id": "J1", "reportTypeId": reporting.REACH}]}
+            if m == "POST" and path.endswith("/jobs"):
+                return {"id": "J2", "reportTypeId": json.loads(b)["reportTypeId"]}
+            raise AssertionError(path)
+        fake = self.use(Fake(handler))
+        out = reporting.main(["ensure-job"])
+        self.assertEqual(out["created"], [reporting.COMBINED])
+        self.assertEqual(sorted(out["jobs"]), sorted([reporting.REACH, reporting.COMBINED]))
+        self.assertEqual(sum(1 for c in fake.calls if c[0] == "POST"), 1)
+
+    def test_ensure_job_with_both_present_creates_nothing(self):
+        def handler(m, path, q, b):
+            if m == "GET":
+                return {"jobs": [{"id": "J1", "reportTypeId": reporting.REACH},
+                                 {"id": "J2", "reportTypeId": reporting.COMBINED}]}
+            raise AssertionError("nothing to create")
+        self.use(Fake(handler))
+        self.assertEqual(reporting.main(["ensure-job"])["created"], [])
+
+
+class ReportingSources(Patched):
+    def handler(self, m, path, q, b):
+        if path.endswith("/jobs"):
+            return {"jobs": [{"id": "J2", "reportTypeId": reporting.COMBINED}]}
+        if path.endswith("/reports"):
+            return {"reports": [{"id": "r1", "startTime": "2026-11-01T07:00:00Z", "createTime": "2026-11-03T00:00:00Z",
+                                 "downloadUrl": "https://youtubereporting.googleapis.com/v1/media/c"}]}
+        return COMBINED_CSV.encode()
+
+    def test_sums_devices_and_splits_browse_by_detail(self):
+        self.use(Fake(self.handler))
+        out = reporting.main(["sources", "--ctr-scale", "percent", "--id", vid(1)])
+        by = {r["traffic_source"]: r for r in out["rows"]}
+        # Two devices of the subscriptions feed: 60 + 20 clicks of 2000 impressions.
+        self.assertEqual((by["browse features: SUBSCRIPTIONS"]["impressions"],
+                          by["browse features: SUBSCRIPTIONS"]["ctr"]), (2000, 0.04))
+        self.assertEqual(by["browse features: WHAT_TO_WATCH"]["ctr"], 0.03)
+        self.assertEqual(by["YouTube search"]["ctr"], 0.1)
+        self.assertNotIn(vid(2), {r["video_id"] for r in out["rows"]})
+        self.assertEqual(out["period"], ["2026-11-01", "2026-11-02"])
+
+    def test_unknown_scale_keeps_impressions_only(self):
+        self.use(Fake(self.handler))
+        out = reporting.main(["sources", "--ctr-scale", "unknown"])
+        self.assertTrue(all("ctr" not in r for r in out["rows"]))
+        self.assertEqual(out["ctr_raw_max"], 10.0)
+
+    def test_first_days_compare_videos_of_different_ages(self):
+        self.use(Fake(self.handler))
+        pub = Path(tempfile.mkdtemp()) / "pub.json"
+        pub.write_text(json.dumps([{"video_id": vid(1), "published_at": "2026-11-01T10:00:00Z"},
+                                   {"video_id": vid(2), "published_at": "2026-10-01T10:00:00Z"}]))
+        out = reporting.main(["sources", "--ctr-scale", "percent", "--published", str(pub), "--first-days", "1"])
+        sources = {(r["video_id"], r["traffic_source"]) for r in out["rows"]}
+        # vid(1)'s first day is 2026-11-01 only: its search row of 11-02 is out; vid(2) is long past day 1.
+        self.assertNotIn((vid(1), "YouTube search"), sources)
+        self.assertNotIn(vid(2), {v for v, _ in sources})
+        self.assertFalse([r for r in out["rows"] if r["video_id"] == vid(1)][0]["partial"])
+
+    def test_a_percent_scale_on_fraction_values_is_flagged(self):
+        frac = COMBINED_CSV.replace(",6.0\n", ",0.06\n").replace(",2.0\n", ",0.02\n").replace(
+            ",3.0\n", ",0.03\n").replace(",10.0\n", ",0.1\n").replace(",1.0\n", ",0.01\n")
+        extra = "".join(f"20261102,UC{'a' * 22},{vid(3)},{t},,1,104,100,0.05\n" for t in (0, 4, 8))
+        self.use(Fake(lambda m, p, q, b: self.handler(m, p, q, b) if not p.endswith("/c") else (frac + extra).encode()))
+        out = reporting.main(["sources", "--ctr-scale", "percent"])
+        self.assertIn("scale_warning", out)
+
+    def test_without_the_combined_job_it_says_how_to_make_it(self):
+        self.use(Fake(lambda m, p, q, b: {"jobs": []}))
+        with self.assertRaises(Refusal) as e:
+            reporting.main(["sources", "--ctr-scale", "percent"])
+        self.assertIn("ensure-job", str(e.exception))
+
+
 if __name__ == "__main__":
     unittest.main()

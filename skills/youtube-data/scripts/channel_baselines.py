@@ -3,7 +3,7 @@
 
   channel_baselines.py --serp F [--serp F2 ...] [--top 20] --out baselines.json
   channel_baselines.py --channel-id UC... [--channel-id UC... ...] --out baselines.json
-  options: --max-videos 30  --sleep 1.0  --refresh
+  options: --max-videos 30  --sleep 1.0  --refresh  --tab videos|shorts  --videos-out videos.json
 
 A video is a breakout when it beats its own channel's median, not when its view count is large:
 400k views is ordinary for a big channel and extraordinary for a channel whose videos get 500. So
@@ -16,6 +16,12 @@ The median is over the latest --max-videos uploads as they are now, without divi
 uploads have had less time, which lowers the median a little, so a multiple read against it errs
 towards calling more breakouts. A channel with fewer than 5 uploads read has no median a reader
 should trust; niches.py skips it.
+
+`--tab shorts` reads the Shorts tab instead (a channel's Shorts have their own normal; keep them in
+their own --out file). `--videos-out` also writes every video read — channel, video_id, title,
+views, url, duration — as the flat list youtube-metrics `swipe.py` takes, so one channel's own
+outliers can be ranked by its own median: that is how Onboarding reads an existing channel's history
+before it is connected. A channel already in --out without its videos is read again for it.
 
 The output file is written after every channel and read back on the next run: channels already in
 it are skipped (unless --refresh), so a long run that stops can be continued. When YouTube answers
@@ -78,19 +84,25 @@ def channels_from_serp(paths: list[str], top: int) -> list[str]:
     return list(seen)
 
 
-def baseline(channel_id: str, max_videos: int) -> dict[str, Any]:
+def baseline(channel_id: str, max_videos: int, tab: str = "videos") -> dict[str, Any]:
     code, out, err = run_ytdlp(["--flat-playlist", "--playlist-end", str(max_videos), "-J", "--no-warnings",
-                                f"https://www.youtube.com/channel/{channel_id}/videos"])
+                                f"https://www.youtube.com/channel/{channel_id}/{tab}"])
     if code != 0:
         return {"error": err.strip() or f"yt-dlp exited {code}"}
     try:
         doc = json.loads(out)
     except json.JSONDecodeError:
         return {"error": "yt-dlp did not return JSON"}
-    views = [int(e["view_count"]) for e in doc.get("entries") or []
-             if isinstance(e, dict) and isinstance(e.get("view_count"), (int, float))]
+    entries = [e for e in doc.get("entries") or []
+               if isinstance(e, dict) and isinstance(e.get("view_count"), (int, float))]
+    views = [int(e["view_count"]) for e in entries]
     subs = doc.get("channel_follower_count")
-    row: dict[str, Any] = {"title": doc.get("channel") or doc.get("uploader"),
+    name = doc.get("channel") or doc.get("uploader")
+    videos = [{"channel": name, "channel_title": name, "channel_id": channel_id, "video_id": e.get("id"), "title": e.get("title"),
+               "views": int(e["view_count"]), "duration": e.get("duration"),
+               "url": (f"https://www.youtube.com/shorts/{e.get('id')}" if tab == "shorts"
+                       else f"https://www.youtube.com/watch?v={e.get('id')}")} for e in entries]
+    row: dict[str, Any] = {"title": name, "videos": videos,
                            "subscribers": int(subs) if isinstance(subs, (int, float)) else None,
                            "videos_read": len(views),
                            "median_views": statistics.median(views) if views else None,
@@ -121,6 +133,9 @@ def main(argv: list[str] | None = None) -> dict[str, Any]:
     p.add_argument("--sleep", type=float, default=1.0, help="seconds between channels (default 1.0)")
     p.add_argument("--out", required=True, help="baselines file; read back and extended on the next run")
     p.add_argument("--refresh", action="store_true", help="read channels already in --out again")
+    p.add_argument("--tab", choices=["videos", "shorts"], default="videos",
+                   help="the channel tab read: long-form videos (default) or Shorts")
+    p.add_argument("--videos-out", help="also write every video read, as swipe.py's input list")
     a = p.parse_args(argv)
     if not a.serp and not a.channel_id:
         raise Refusal("pass --serp FILE or --channel-id UC...")
@@ -133,17 +148,20 @@ def main(argv: list[str] | None = None) -> dict[str, Any]:
     wanted = list(dict.fromkeys([*a.channel_id, *channels_from_serp(a.serp, a.top)]))
     out = Path(a.out)
     doc = load_existing(out) or {"channels": {}, "failed": {}}
-    doc.update({"max_videos": a.max_videos, "source": "yt-dlp, the channel's public Videos tab"})
+    if doc.get("tab", "videos") != a.tab and doc.get("channels"):
+        raise Refusal(f"{out} holds the {doc.get('tab', 'videos')} tab; pass another --out for {a.tab}")
+    doc.update({"max_videos": a.max_videos, "tab": a.tab,
+                "source": f"yt-dlp, the channel's public {'Shorts' if a.tab == 'shorts' else 'Videos'} tab"})
     doc.setdefault("failed", {})
     read = skipped = 0
     stopped = None
     for n, cid in enumerate(wanted):
-        if cid in doc["channels"] and not a.refresh:
+        if cid in doc["channels"] and not a.refresh and (not a.videos_out or "videos" in doc["channels"][cid]):
             skipped += 1
             continue
         if read and a.sleep:
             time.sleep(a.sleep)
-        row = baseline(cid, a.max_videos)
+        row = baseline(cid, a.max_videos, a.tab)
         if "error" in row:
             if RATE_LIMITED.search(row["error"]):
                 stopped = (f"YouTube answered 429 after {read} channel(s); {len(wanted) - n} left. "
@@ -161,6 +179,12 @@ def main(argv: list[str] | None = None) -> dict[str, Any]:
             raise Refusal(f"cannot write {out}: {e}") from None
     if not out.exists():
         out.write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
+    if a.videos_out:
+        flat = [v for cid in wanted for v in (doc["channels"].get(cid) or {}).get("videos", [])]
+        try:
+            Path(a.videos_out).write_text(json.dumps(flat, ensure_ascii=False, indent=1), encoding="utf-8")
+        except OSError as e:
+            raise Refusal(f"cannot write {a.videos_out}: {e}") from None
     return {"ok": True, "out": str(out), "wanted": len(wanted), "read": read, "skipped": skipped,
             "failed": len(doc["failed"]), "stopped": stopped,
             "note": "median_views is over the latest uploads as they are now; channels with fewer than "

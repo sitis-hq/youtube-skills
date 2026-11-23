@@ -1,6 +1,6 @@
 ---
 name: youtube-strategy
-description: Channel strategy, video ideas, the monthly content calendar and the weekly analytics report for a YouTube channel — output templates with quality bars, the channel types that `profile.channel_type` names, dated and sourced thresholds, and a 0-100 idea score with defined scales. Use in Onboarding (niche, positioning, pillars, cadence), Recon (idea backlog), Planning (calendar) and Analytics (report ending in one main fix).
+description: Channel strategy, video ideas, the monthly content calendar and the weekly analytics report for a YouTube channel — output templates with quality bars, the channel types that `profile.channel_type` names, dated and sourced thresholds, and a 0-100 idea score with defined scales. Use in Onboarding (niche, positioning, pillars, cadence; an existing channel's history), Recon (idea backlog), Planning (calendar), Analytics (report ending in one main fix) and the quarterly Channel Audit (why a channel stalls, one decision on the action ladder).
 ---
 
 # YouTube strategy
@@ -16,6 +16,7 @@ and check the output against its quality bar before finishing.
 | Onboarding: niche, positioning, pillars, cadence, identity | `references/strategy.md`, `references/channel-types.md` | `seed` (after youtube-demand) | `profile` (with `channel_type`, `identity_token`), `seed` via youtube-demand; artifact `strategy.md` |
 | Recon: idea backlog | `references/ideation.md` | `profile`, `seed`, `watch`, `velocity`, earlier `idea` | `idea` (+ new `seed` via youtube-demand); artifact `ideas.md` |
 | Planning: monthly calendar | `references/calendar.md` | `profile`, `idea` (Recon's memory), `plan`, `publish` | `plan`; artifact `calendar-YYYY-MM.md` |
+| Channel Audit (quarterly) and Onboarding's history of an existing channel | `references/channel-audit.md`, `references/thresholds.md` | `profile`, `plan`, `publish` | none; artifacts `audit-YYYY-QN.md`, `audit-decision.json` |
 | Analytics: weekly report | `references/analytics-report.md` | `studio`, `velocity`, `publish`, `plan`, `idea`, `profile` | none; artifact `report-YYYY-MM-DD.md` |
 | Any number you are about to quote | `references/thresholds.md` | — | — |
 

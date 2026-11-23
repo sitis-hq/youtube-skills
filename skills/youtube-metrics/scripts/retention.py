@@ -26,6 +26,13 @@ Three numbers, because they are three different problems:
   cliffs      the five steepest single drops of more than 0.8 points — moments people left at
   slide       the mean loss per axis unit after the hook — the steady bleed of the middle
 
+And `intro_30s`: the share still watching at 30 s, read off the curve between its two nearest
+points. It is Studio's "Intro" key moment (YouTube Help 9314415, read 2026-11-23: the percentage of
+viewers still watching after the first 30 seconds), fixed at 30 s whatever --hook-seconds says, so
+it compares with Studio and across videos. It needs positions in seconds (`--axis seconds`, or
+--duration), and is null for a video of 30 s or less. A curve from the API's audienceWatchRatio can
+pass 100 where viewers rewatch; the value is given as the curve has it.
+
 With --transcript (srt, vtt or whisper json) each cliff carries what was said within 4 s of it.
 """
 
@@ -120,15 +127,42 @@ def analyse(rows: list[tuple[float, float]], axis: str, watch_unit: str, duratio
                        "at_seconds": round(s, 1) if s is not None else None,
                        "at_percent": round(pc, 2) if pc is not None else None})
     middle = [r for r, x0, _, _ in drops if x0 > cutoff]
+    intro, intro_note = intro_at(rows, seconds_axis, duration)
     return {
         "points": len(rows), "start": round(start, 2), "end": round(ys[-1], 2),
         "hook_window": hook_basis, "hook_leak": round(start - hook_end, 2),
+        "intro_30s": intro, "intro_note": intro_note,
         "cliffs": cliffs,
         "slide": round(sum(middle) / len(middle), 4) if middle else 0.0,
         "units": {"start/end/hook_leak/lost": "percentage points of the viewers who started",
+                  "intro_30s": "percent of viewers still watching at 30 s",
                   "slide": "points lost per second" if seconds_axis else "points lost per 1 % of the video",
                   "from/to": "seconds" if seconds_axis else "percent of the video"},
     }
+
+
+INTRO_SECONDS = 30.0
+
+
+def intro_at(rows: list[tuple[float, float]], seconds_axis: bool,
+             duration: float | None) -> tuple[float | None, str | None]:
+    if not seconds_axis and not duration:
+        return None, "needs --duration: a percent axis cannot be placed at 30 s"
+    if duration is not None and duration <= INTRO_SECONDS:
+        return None, f"the video is {duration:g} s long; the Intro moment needs more than 30 s"
+    at = INTRO_SECONDS if seconds_axis else INTRO_SECONDS / duration * 100
+    if at > rows[-1][0]:
+        return None, "the curve ends before 30 s"
+    if at < rows[0][0]:
+        # The API's curve starts at 1 % of the video: past 50 minutes that is after 30 s.
+        return None, "the curve's first point is after 30 s; the Intro cannot be read from it"
+    if at == rows[0][0]:
+        return round(rows[0][1], 2), None
+    for (x0, y0), (x1, y1) in zip(rows, rows[1:]):
+        if x0 <= at <= x1:
+            y = y0 if x1 == x0 else y0 + (y1 - y0) * (at - x0) / (x1 - x0)
+            return round(y, 2), None
+    return None, "the curve has no point around 30 s"
 
 
 def attach_transcript(result: dict[str, Any], path: str) -> None:

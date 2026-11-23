@@ -56,13 +56,14 @@ playlist's identity, and youtube-channel-setup's `apply_channel.py playlist` bui
 | Job | Recipe | Read |
 | --- | --- | --- |
 | Signing in, checking the channel, asking for a login | all | `references/session.md` |
-| Impressions and impression CTR per video | Daily data | `references/impressions-ctr.md` — Reporting API `channel_reach_basic_a1` first; Studio export + `scripts/studio_reach.py` as fallback |
+| Impressions and impression CTR per video | Daily data | `references/impressions-ctr.md` — Reporting API `channel_reach_basic_a1` first; Studio export + `scripts/studio_reach.py` as fallback; per traffic source: `channel_reach_combined_a1` (youtube-data `reporting.py sources`) |
 | Thumbnail A/B test (start, read result) | Planning & optimization | `references/ab-test.md` — winner by watch-time share, never by CTR |
 | Pin, heart, hide, report a comment; reply via Studio | Community | `references/comment-actions.md` |
 | Community post or poll | Community | `references/community-post.md` |
 | Upload defaults | Onboarding | `references/upload-defaults.md` |
 | Channel settings, picture, name, handle, banner, watermark | Onboarding | `references/channel-profile.md` |
 | Home tab: featured videos, sections | Onboarding | `references/home-tab.md` |
+| New, casual and regular viewers; Analytics for Artists | Channel Audit | `references/viewer-groups.md` — Studio only, no API |
 
 ## `studio_reach.py`
 

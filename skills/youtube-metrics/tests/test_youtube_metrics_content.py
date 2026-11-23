@@ -78,6 +78,28 @@ class Retention(Tmp):
                               "--transcript", srt])
         self.assertEqual(out["cliffs"][0]["said"], "and now the sponsor")
 
+    def test_intro_is_read_at_thirty_seconds_whatever_the_hook_window(self):
+        # 100 points over 600 s: 30 s is position 5 %; the curve falls 0.5 points per percent.
+        out = retention.main([self.csv(curve(100)), "--axis", "percent", "--duration", "600",
+                              "--hook-seconds", "15"])
+        expected = [y for x, y in curve(100) if x == 5][0]
+        self.assertEqual(out["intro_30s"], round(expected, 2))
+        self.assertIsNone(out["intro_note"])
+
+    def test_intro_needs_seconds_and_a_video_longer_than_thirty(self):
+        out = retention.main([self.csv(curve(100)), "--axis", "percent"])
+        self.assertIsNone(out["intro_30s"])
+        self.assertIn("--duration", out["intro_note"])
+        short = [(s, 100 - s) for s in range(0, 25)]
+        out = retention.main([self.csv(short), "--axis", "seconds", "--duration", "25"])
+        self.assertIsNone(out["intro_30s"])
+
+    def test_intro_of_a_very_long_video_is_not_taken_from_a_later_point(self):
+        # 100 points over two hours: the first point is at 72 s.
+        out = retention.main([self.csv(curve(100)), "--axis", "percent", "--duration", "7200"])
+        self.assertIsNone(out["intro_30s"])
+        self.assertIn("after 30 s", out["intro_note"])
+
     def test_too_few_points(self):
         with self.assertRaises(Refusal):
             retention.main([self.csv(curve(5)), "--axis", "percent"])

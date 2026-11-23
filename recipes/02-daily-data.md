@@ -187,9 +187,10 @@ step: the newest one with a conclusion is the scale every run uses.
    - `reports_read` above zero but no `records` → the days had no data: write
      `--available false --source reporting-api` for every own video, `as_of` the run date minus 2
      days (the newest day a report covers);
-   - refused with "no channel_reach_basic_a1 job" → run `reporting.py ensure-job` (it creates the
-     job only when it is missing), name the job id in the summary and tell the owner it was missing;
-     then take the Studio fallback for today;
+   - refused with "no channel_reach_basic_a1 job" → run `reporting.py ensure-job` (it creates
+     whichever of the two reach jobs, basic and combined, is missing — the Channel Audit reads the
+     combined one), name the created jobs in the summary and tell the owner they were missing; then
+     take the Studio fallback for today;
    - `reports_read` zero (a job younger than about 48 hours), or any other failure of the call →
      the Studio fallback. "not connected" or "reconnect" also asks the owner to reconnect YouTube
      on the project's Credentials page.

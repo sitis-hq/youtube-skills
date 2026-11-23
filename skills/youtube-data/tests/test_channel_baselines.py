@@ -76,6 +76,30 @@ class Baselines(unittest.TestCase):
         self.call("--channel-id", A)
         self.assertIn("fewer than 5", self.saved()["channels"][A]["note"])
 
+    def test_videos_out_is_the_list_swipe_reads(self):
+        self.answers[A] = (0, tab(1850, [75, 81, 78, 240, 287]), "")
+        vids = str(Path(self.dir.name) / "videos.json")
+        self.call("--channel-id", A, "--videos-out", vids)
+        flat = json.loads(Path(vids).read_text())
+        self.assertEqual([v["views"] for v in flat], [75, 81, 78, 240, 287])
+        self.assertEqual(flat[0]["url"], "https://www.youtube.com/watch?v=x0")
+        self.assertEqual({v["channel_id"] for v in flat}, {A})
+
+    def test_the_shorts_tab_is_read_and_kept_apart(self):
+        seen: list[str] = []
+
+        def fake(argv):
+            seen.append(argv[-1])
+            return (0, tab(10, [1, 2, 3, 4, 5]), "")
+        with mock.patch.object(cb, "run_ytdlp", side_effect=fake):
+            vids = str(Path(self.dir.name) / "shorts.json")
+            self.call("--channel-id", A, "--tab", "shorts", "--videos-out", vids)
+            self.assertTrue(seen[0].endswith(f"/channel/{A}/shorts"))
+            self.assertTrue(json.loads(Path(vids).read_text())[0]["url"].startswith("https://www.youtube.com/shorts/"))
+            code, doc = self.call("--channel-id", A, "--tab", "videos")
+        self.assertEqual(code, 2)
+        self.assertIn("another --out", doc["error"])
+
     def test_a_second_run_reads_only_what_the_first_did_not(self):
         self.call("--channel-id", A)
         self.asked.clear()

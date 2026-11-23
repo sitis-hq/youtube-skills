@@ -17,6 +17,7 @@ is `{"ok": false, "error": ...}` with exit code 2 — it names what is wrong wit
 | Score recon candidates | `candidates.py found.json --source search --baseline uploads.json` | `watch` record |
 | Outliers against each channel's median | `swipe.py videos.json --direction up\|down\|both` | — (analysis) |
 | Why viewers leave | `retention.py retention-ID.csv --axis percent --duration S --transcript ID.srt` | — (diagnosis) |
+| Studio's Intro: the share still watching at 30 s | the same call; `intro_30s` (needs `--duration` on a percent axis) | — (diagnosis) |
 | Lint a title with its thumbnail text | `title.py --title "..." --thumb "..." --lang <lang>` or `--titles-file` | — |
 | Check a description's chapters | `chapters.py validate --description-file d.txt --duration S` | — |
 | Draft chapters from a transcript | `chapters.py draft ID.srt --target 7 --lang <lang>` | — |

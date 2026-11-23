@@ -11,15 +11,17 @@ relies on come from one commit and cannot drift apart.
 
 | # | Brief | Runs | Reads from |
 | --- | --- | --- | --- |
-| 1 | [Onboarding](01-onboarding.md) | once per channel, by hand | — |
+| 1 | [Onboarding](01-onboarding.md) | once per channel, by hand; steps 1–7 again when an audit shifts the niche | Channel Audit |
 | 2 | [Daily data](02-daily-data.md) | daily | Onboarding, Recon |
 | 3 | [Recon, trends and ideas](03-recon.md) | weekly, Monday | Onboarding, Daily data, Community, Planning, creation recipes |
 | 4 | [Analytics](04-analytics.md) | weekly, Tuesday (a day after Recon) | Onboarding, Daily data, Recon, Planning, creation recipes |
-| 5 | [Planning and optimization](05-planning.md) | monthly | Onboarding, Daily data, Recon, Analytics, creation recipes |
+| 5 | [Planning and optimization](05-planning.md) | monthly | Onboarding, Daily data, Recon, Analytics, Channel Audit, creation recipes |
 | 6 | [Community](06-community.md) | weekdays | Onboarding |
+| 7 | [Channel Audit](07-channel-audit.md) | quarterly; the first run by hand after Onboarding of an existing channel | Onboarding, Daily data, Planning, creation recipes |
 
 The exact recipe names, which the briefs use to find each other: "YouTube Onboarding", "YouTube Daily
-data", "YouTube Recon", "YouTube Analytics", "YouTube Planning", "YouTube Community". A creation
+data", "YouTube Recon", "YouTube Analytics", "YouTube Planning", "YouTube Community", "YouTube Channel
+Audit". A creation
 recipe (such as "Create Music Release") publishes videos and writes `publish` records.
 
 ## Rules every recipe of the set follows
@@ -109,7 +111,7 @@ The run context then gives the producer's id, and deleting the producer warns th
 breaks.
 
 A recipe never reads another it has not declared, not even by finding it by name. When a producer
-does not exist yet as the reader is built (the briefs are built in order 2 → 6), the reader is built
+does not exist yet as the reader is built (the briefs are built in order 2 → 7), the reader is built
 without that read and treats the producer as absent, saying so in its run. The producer's brief then
 tells the editor to add the `declare-read` to each earlier reader it names, so the set is complete
 once the last brief is built.
@@ -172,14 +174,14 @@ A row cites `<brief>: <steps>`. "Inside" means another script runs it, and no st
 | `youtube-channel-setup` | `avatar_preview.py` | 1: 12 |
 | `youtube-channel-setup` | `banner_preview.py` | 1: 12 |
 | `youtube-community` | `comments.py` | 6: 1, 6 |
-| `youtube-data` | `analytics.py` | 1: 18; 4: 2, 3, 4, 6, 7; 5: 5 |
-| `youtube-data` | `channel_baselines.py` | 1: 1; 3: 9 |
-| `youtube-data` | `data_api.py` | 1: 11, 18; 2: 1; 3: 2, 4, 5, 10; 4: 4, 5, 11; 5: 1, 5 |
-| `youtube-data` | `reporting.py` | 1: 11; 2: 3; 4: 6; 5: 5 |
+| `youtube-data` | `analytics.py` | 1: 18; 4: 2, 3, 4, 6, 7; 5: 5; 7: 2, 3, 4, 5 |
+| `youtube-data` | `channel_baselines.py` | 1: 1; 3: 9; 7: 2, 6 |
+| `youtube-data` | `data_api.py` | 1: 11, 18; 2: 1; 3: 2, 4, 5, 10; 4: 4, 5, 11; 5: 1, 5; 7: 2 |
+| `youtube-data` | `reporting.py` | 1: 11; 2: 3; 4: 6; 5: 5; 7: 3 |
 | `youtube-data` | `thumbnails.py` | 3: 8; 5: 6, 8 |
 | `youtube-data` | `transcript.py` | 3: 7; 4: 7; 5: 6 |
-| `youtube-demand` | `dfs.py` | 1: 1, 3, 6; 3: 2, 3, 10; 5: 6 |
-| `youtube-demand` | `niches.py` | 1: 1; 3: 9 |
+| `youtube-demand` | `dfs.py` | 1: 1, 3, 6; 3: 2, 3, 10; 5: 6; 7: 6 |
+| `youtube-demand` | `niches.py` | 1: 1; 3: 9; 7: 6 |
 | `youtube-demand` | `normalize.py` | 1: 6; 3: 3, 10; 5: 6 |
 | `youtube-demand` | `yt_competition.py` | inside `niches.py` and `normalize.py` |
 | `youtube-metadata` | `apply_video.py` | 5: 7, 8 |
@@ -187,12 +189,12 @@ A row cites `<brief>: <steps>`. "Inside" means another script runs it, and no st
 | `youtube-metrics` | `candidates.py` | 3: 4 |
 | `youtube-metrics` | `chapters.py` | 5: 6 |
 | `youtube-metrics` | `deadair.py` | 4: 8 |
-| `youtube-metrics` | `retention.py` | 4: 8; 5: 5 |
-| `youtube-metrics` | `swipe.py` | 3: 6, 7; 4: 9; 5: 5 |
+| `youtube-metrics` | `retention.py` | 4: 8; 5: 5; 7: 4 |
+| `youtube-metrics` | `swipe.py` | 1: 1; 3: 6, 7; 4: 9; 5: 5; 7: 2 |
 | `youtube-metrics` | `title.py` | 3: 11; 4: 9; 5: 4, 6 |
 | `youtube-metrics` | `velocity.py` | 2: 2 |
 | `youtube-metrics` | `ypp.py` | 1: 18; 4: 4 |
-| `youtube-records` | `records.py` | 1: 6, 7; 2: 1, 2, 3; 3: 1, 4, 10, 11; 4: 1; 5: 1, 2, 4; 6: 1, 6, 7 |
+| `youtube-records` | `records.py` | 1: 6, 7; 2: 1, 2, 3; 3: 1, 4, 10, 11; 4: 1; 5: 1, 2, 4; 6: 1, 6, 7; 7: 1 |
 | `youtube-strategy` | `score_idea.py` | 3: 11; 5: 3 |
 | `youtube-studio` | `intent.py` | 1: 16, 17; 5: 9; 6: 6, 7 |
 | `youtube-studio` | `studio_reach.py` | 2: 3 |

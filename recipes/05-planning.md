@@ -6,7 +6,8 @@ Follow [the rules of the set](README.md); this brief adds what is specific to Pl
 **Schedule:** monthly — cron `0 6 1 * *` (06:00 on the 1st) in the time zone of
 `profile:channel`'s `country`, like every scheduled recipe of the set except Daily data (UTC);
 confirm the day and time with the owner · **Reads from:** "YouTube Onboarding", "YouTube Daily data",
-"YouTube Recon", "YouTube Analytics", and each creation recipe that publishes to this channel.
+"YouTube Recon", "YouTube Analytics", "YouTube Channel Audit" (when it exists), and each creation
+recipe that publishes to this channel.
 
 ## What it is for
 
@@ -157,6 +158,19 @@ it, and writes down what is missing; later steps do not query other recipes agai
        of point 3. None → the records alone, said so;
      - `ideas.md` (step "Idea backlog and idea status") and `trend-radar.md` (step "Trend radar"),
        when they exist. They are for reading only: the `idea` records are the contract.
+   - From "YouTube Channel Audit", when declared (its brief adds the declaration): the newest
+     `audit-decision.json` (step "Owner review": it carries the owner's answer) and its
+     `audit-YYYY-QN.md` (step "Diagnosis and decision"). It counts only when its `quarter` is the
+     quarter of the newest "Diagnosis and decision" file and its `owner_answer.answer` is
+     `accepted` or `changed`; an audit the owner has not answered yet, or an older quarter's
+     decision, is named in `inputs.md` and not acted on. A counting decision steers the month:
+     `routes_to` `planning` (rung 1, repackaging) → step 5 takes the videos in its `videos` first and
+     step 9 tests them, in the first Planning run after the answer only (an earlier `inputs.md` of
+     this recipe that names the decision as applied means it was done; report it instead);
+     `creation` (rungs 2–3: intro, format, length) → step 4 writes the change into every slot it
+     concerns, each month until the decision's `judge_after` is reached; `onboarding` or `owner` →
+     Planning changes nothing of its own and names the pending decision. Not declared or none → "no
+     audit decision" and go on.
    - From this recipe's own earlier runs: `ab-variants.json` and every `ab-test-<videoId>.json`
      (step 9), so steps 5 and 9 know which tests are running. Also `apply-report.md` (step 8),
      so step 5 knows what was changed recently.

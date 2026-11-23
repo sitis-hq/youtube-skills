@@ -24,10 +24,48 @@ anybody's average.
 | YPP, ad revenue sharing | 1 000 subscribers + either 4 000 public long-form watch hours in 12 months or 10 M public Shorts-feed views in 90 days; Shorts-feed watch hours do not count toward the 4 000 | Help 72851, Help 13429240 |
 | Shorts length | up to 3 minutes | Help 10059070 |
 | Thumbnail tests | up to 3 variants; winner by watch time; ~2 weeks; no Shorts, Premieres, scheduled lives, made-for-kids, mature, private | Help 13861714 |
+| Title tests (Test & Compare) | titles, thumbnails or both, up to 3 variants, up to 2 weeks, winner by watch-time share, may end "inconclusive"; global for channels with advanced features since December 2025 | Help 16391400 via Search Engine Journal, 2025-12 (read 2026-11-23) |
 | Thumbnail specification | 16:9 (Shorts 9:16); up to 3840×2160; min width 640; JPG/PNG; 2 MB on mobile, 50 MB on desktop; verified account | Help 72431 |
 | Metadata limits | title 100 characters, description 5 000 bytes, tags 500 characters, > 60 hashtags all ignored, chapters ≥ 3 from 0:00 and ≥ 10 s | youtube-metadata `references/metadata-rules.md` |
 | Tags' weight | minimal for discovery except common misspellings | Help 146402 |
 | Shorts description links | not clickable since 2023-08-31 | Tubefilter 2023-08-10 (secondary report of YouTube's announcement) |
+
+## YouTube, for diagnosing a channel (read 2026-11-23)
+
+From the stalled-channel research of 2026-11-23 (sources as it cites them; "via" = a YouTube
+statement known through a write-up). `channel-audit.md` builds on these rows.
+
+| Fact | Number or statement | Source |
+| --- | --- | --- |
+| Impressions CTR spread | half of all channels and videos have impressions CTR between 2 % and 10 %; CTR varies by content, audience and where the impression was shown | Help 7628154 |
+| Intro key moment | the percentage of viewers still watching after the first 30 seconds; a high one means the opening "matched the viewer's expectation of the video's thumbnail and title" | Help 9314415 |
+| Viewer groups | casual = watched in 1–5 of the last 12 months; regular = 6 or more of the last 12 | YouTube (Creator Insider) via Search Engine Journal and Social Media Today, 2025-07 |
+| Viewer groups and reach | the groups do not affect reach or monetisation; returning viewers make recommending later videos more likely | Help 10246996 |
+| Breaks and cadence | "no correlation between break length and changes in views"; growth in views across uploads "not correlated with time between uploads"; it "may take some time to 'warm up' your audience again" | Help 141805 |
+| One weak video | does not hurt the channel; views fall "when viewers stop watching most of your videos when they're recommended to them" | Help 141805 |
+| Unlisted, then public | does not hurt: "what matters is how viewers respond after it's been published" | Help 141805 |
+| Monetisation and reach | the system "doesn't know which videos are monetizing" | Help 141805 |
+| A video's life | evergreen videos can get most of their views "a month or more after publishing"; the first hour does not decide | Todd Beaupré, Creator Insider 2026-09-01, via Founder Presence 2026-11-19 |
+| Subscriptions as control | the subscriptions feed is the most consistent audience from upload to upload: a video that fails even there points at its topic and title | same |
+| Judging a pivot | not on its first 3 videos, "or even its first ten"; set success metrics and a timeline first | Kyle Monahan, Creator Insider 2026-09-18, via Vanpelt Studio 2026-09-24 |
+| Pivot or new channel | "if it's for the same audience, at least try it on the same channel. If it's for a different audience, try it on a different channel"; a pivot is "essentially starting a new channel with maybe a boost" | Rene Ritchie, TubeTalk 2026-02-16 |
+| Unoriginal Shorts | from 2026-10-01 the Shorts feed reduces the reach of re-uploads that add nothing of the uploader's own; channels primarily aggregating get less distribution | TeamYouTube, "Prioritizing original content on Shorts", Help Community 2026-10-01 |
+| Shorts and long-form | ranked by separate systems; "we haven't seen evidence of Shorts negatively impacting long-form performance" | The YouTube Team, "Shorts truths", blog.youtube 2025-05-06 |
+| Artist reach | Analytics for Artists separates "Official Artist Channel" (Art Tracks included) from "Other Channels" (fan videos whose main component is the song) | Help 18736729 |
+| Reach reports | the Reporting API keeps reports 60 days (historical ones 30); a new job gets the 30 days before its creation | developers.google.com/youtube/reporting (read 2026-11-23) |
+
+## Never recommended
+
+YouTube refutes these, so no report, audit or plan offers them as a growth lever. A step that is
+about to write one of them stops and says which row forbids it.
+
+| Do not recommend | Why |
+| --- | --- |
+| Upload more often, or daily, to grow | cadence is not correlated with growth (Help 141805). Restoring output after a drop is different: fewer uploads are fewer chances, not a penalty — the audit's "volume" row |
+| Delete or private old weak videos | a weak video does not hurt the channel (Help 141805); no YouTube statement says deletion helps, and the video's history is lost |
+| Tags as a discovery lever | "not important" except misspellings (Help 141805, 146402) |
+| A shadow ban as the explanation | Ritchie: channels claiming one still get most traffic from recommendations (TubeTalk 2026-02-16); the one real per-channel reduction is unoriginal Shorts, above |
+| Re-uploading or publishing in a set hour for reach | publish time does not affect a video's long-term performance except Live and Premieres (Help 141805) |
 
 A reported 2027 rise of the ad-revenue thresholds (8 000 hours / 20 M Shorts views, The Next Web)
 is **not** on Help 13429240 as read 2026-11-04 — re-read the page before telling an owner.
@@ -51,6 +89,16 @@ is **not** on Help 13429240 as read 2026-11-04 — re-read the page before telli
 | Stale `velocity` | its `as_of` more than 2 days before the run | Daily data runs daily; two missed runs mean the rate no longer describes the video. Every reader uses this row |
 | Stale `studio` | its `as_of` more than 4 days before the run | a `studio` record describes the run date − 2 by design (Reporting API and Studio lag two days), so 4 days is two missed runs |
 | Plan slot dropped | no `publish` 14 days after the slot's date; a later `publish` reopens it as published | a release can slip a week or two without being abandoned; Planning re-checks dropped slots of the last 60 days |
+| Video ages for a baseline | views at 7 and at 28 days, against the channel's median at the same age and format | compares like with like (Help 7628154: CTR varies by where and when it is shown); the research's recommendation, the ages are ours |
+| Smallest sample to read a pattern | 5 videos of the same format in the window; fewer → the audit says "too few to judge" | no published minimum exists; 5 is ours, chosen so one outlier cannot carry a median |
+| Judging an intro or format change | 5 uploads with the change, against the last 10 of the same length band | no published number (research, open question 2); 5 is ours, the 10 is Studio's "typical" comparison |
+| Judging a niche shift or repositioning | 15 uploads with the change, judged on their 28-day views | Monahan: not on the first 3 "or even the first ten" (above); 15 is ours, past his line |
+| Length bands of long-form | under 8 min, 8–20 min, over 20 min | ours: comparisons stay among videos of similar length, as Studio's "typical" does; 8 min is where mid-rolls become available (Help 6175006), 20 min splits long talks from the rest |
+| Spike | a video at 10× or more of its group's median | ours, at 1of10's top band (10×); a spike is left out of the median and read as viewers who may not return (Help 141805) |
+| Topic that worked | a topic with 3 or more upward outliers | 1of10's validation rule: "find 3+ videos on the same concept that all became outliers" (1of10 on X, undated) |
+| Too few impressions to read CTR | under 100 impressions for the video and source in the window | ours; a write-up of Help 7628154 (1dsmgmt.com, read via the research 2026-11-23) says new videos and those under 100 views show wider CTR ranges |
+| Audit period | the 90 days ending 3 days before the run (the Analytics API lags), against the 90 days before; CTR by source covers what the Reporting API still keeps (60 days) | ours: one window for every step of the audit |
+| Destructive step gate | repositioning or a new channel only when the same cause holds over 10 or more videos | the research's recommendation 5; ours as a rule |
 | Data freshness | seed metrics older than 31 days are re-measured before ranking | DataForSEO Labs updates keyword metrics monthly (Labs keyword_overview docs, 2026-11-04) |
 
 ## Secondary (context only)
@@ -58,7 +106,7 @@ is **not** on Help 13429240 as read 2026-11-04 — re-read the page before telli
 | Claim | Source as cited by claude-youtube | Use |
 | --- | --- | --- |
 | Average CTR by traffic source: search 12.5 %, suggested 9.5 %, browse 3.5 %, external 2.8 % | Focus Digital, December 2025 (single agency) | only to explain why browse CTR must not be compared with search CTR |
-| Channels uploading 12+ times a month grew views faster | vidIQ study of 5.08 M channels | only as "consistency matters"; cadence is set by what the channel can sustain |
+| Channels uploading 12+ times a month grew views faster | vidIQ study of 5.08 M channels | never as advice to upload more: YouTube finds cadence not correlated with growth (Help 141805). Cadence is set by what the channel can sustain |
 | Ad rates are higher in Q4 and lowest in January | several marketing sources, no single study | qualitative: schedule monetisable topics into Q4; no percentage |
 
 ## Dropped, and why
@@ -77,4 +125,9 @@ is **not** on Help 13429240 as read 2026-11-04 — re-read the page before telli
 | "Faces +20–30 % CTR", "chapters +4 % AVD", "AI narration −70 % retention", "+106 % from updating evergreen" | no checkable source |
 | Thumbnail spec "1280×720, ≤ 2 MB" | outdated; current spec above |
 | Test winners "by CTR" | YouTube judges by watch time |
+| "4–6 % CTR is average, 10 %+ excellent", CTR tables by channel size | no source; YouTube publishes only the 2–10 % half-of-channels band (research 2026-11-23) |
+| "70 % still watching at 30 s is strong, under 50 % needs a fix" | no source; compare the Intro with the channel's own typical |
+| Shorts-to-long-form conversion rates ("under 10 %", "12–18 subscribers per 10 k views") | no source; YouTube publishes none |
+| "Galloway's 500-channel study: Shorts + long-form grew 2.8× faster" | no primary trace |
+| "The algorithm punishes a break", "the first hour decides", "a 20/50/80 % gradual pivot" | refuted by YouTube or reported to fail (rows above) |
 | YPP expanded tier "500 / 3 / 3 000" written as the only tier | correct numbers, but incomplete — both tiers above |
