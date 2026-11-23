@@ -76,6 +76,7 @@ class Keys(unittest.TestCase):
         self.assertEqual(intent.build_key("pin", comment_id="UgxAAAAAAAAAAAA"), "pin:comment:UgxAAAAAAAAAAAA")
         self.assertEqual(intent.build_key("post", date="2026-11-04", title="New single: Neon Hearts!"),
                          "post:community:2026-11-04:new-single-neon-hearts")
+        self.assertEqual(intent.check_key("upload:video:0123456789ab"), "upload:video:0123456789ab")
         self.assertEqual(intent.build_key("playlist", title="Dark Southern Lane!"),
                          "playlist:create:dark-southern-lane")
         self.assertEqual(intent.check_key("playlist:create:dark-southern-lane"), "playlist:create:dark-southern-lane")

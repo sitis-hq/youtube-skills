@@ -37,9 +37,9 @@ calls `ai-integration upsert-template-record` only for a valid record. Output is
 | `watch` | `watch:<videoId>` | Recon | Daily data, Analytics, Planning |
 | `velocity` | `velocity:<videoId>` | Daily data | Recon, Analytics, Planning |
 | `studio` | `studio:<videoId>` | Daily data | Analytics, Planning |
-| `idea` | `idea:<slug(title)>` | Recon | Planning, creation recipes |
-| `plan` | `plan:<date>:<slot>` | Planning | creation recipes, Analytics |
-| `publish` | `publish:<videoId>` | creation recipes | Analytics, Planning |
+| `idea` | `idea:<slug(title)>` | Recon | Planning, Analytics, creation recipes |
+| `plan` | `plan:<date>:<slot>` | Planning | creation recipes, Analytics, Recon |
+| `publish` | `publish:<videoId>` | creation recipes (e.g. Create Music Release) | Analytics, Planning, Recon |
 | `replied` | `replied:<commentId>:<action>` | Community | Community |
 
 `schema` gives each kind's fields with their meaning; read it before writing a kind for the first time.
@@ -47,9 +47,14 @@ calls `ai-integration upsert-template-record` only for a valid record. Output is
 ## Rules the script cannot check for you
 
 - **One writer per record.** A recipe never edits a record another recipe wrote. Planning does not move
-  an idea's status; it writes its own `plan` record that names the idea.
+  an idea's status; it writes its own `plan` record that names the idea, and Recon moves the idea from
+  the `plan` and `publish` records it reads.
+- **A seed in two memories** (Onboarding's and Recon's): take the record with the later `as_of`.
+- **Links between kinds**: `publish.plan` is the full key `plan:<date>:<slot>`; `publish.idea` and
+  `plan.idea` are the idea's slug without `idea:`.
 - **Read the writer's memory, not your own.** The writer's template id comes from the run context
   (declared reads) or from `find-spec-template`.
+- **Staleness** of `velocity` and `studio`: `youtube-strategy/references/thresholds.md` ("Ours").
 - **Units are part of the contract.** `ctr` is a fraction (Studio shows 4.5 %; write `0.045`);
   `kd_web` is DataForSEO's 0–100 as it comes; `yt_interest` is a Google Trends index 0–100, not a
   number of searches; dates are `YYYY-MM-DD`, times carry a zone.

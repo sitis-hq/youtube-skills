@@ -199,9 +199,11 @@ def opt(parse: Callable[[str, Any], Any], doc: str) -> Field:
 def _studio_available(data: dict[str, Any]) -> None:
     # "No data" is a record, not a missing record: the reader must tell "not exported yet" from
     # "the export failed today", and a missing key says neither.
+    # ctr may be absent while impressions are there: the Reporting API's CTR scale is settled from a
+    # real file (youtube-data reporting.py), and until then a CTR would be wrong a hundredfold.
     measured = [f for f in ("impressions", "ctr") if f in data]
-    if data["available"] and len(measured) != 2:
-        raise Refusal("available=true needs both impressions and ctr")
+    if data["available"] and "impressions" not in data:
+        raise Refusal("available=true needs impressions (ctr may be left out while its scale is unsettled)")
     if not data["available"] and measured:
         raise Refusal(f"available=false must not carry {', '.join(measured)}")
 
@@ -247,7 +249,11 @@ kind(Kind(
     readers="Recon, Planning, the creation recipes",
     doc="A keyword the channel targets, with the demand measured for it. kd_web is DataForSEO's "
         "web keyword difficulty, 0-100, as it comes; there is no YouTube keyword difficulty, so "
-        "yt_competition is ours, from the YouTube results (youtube-demand).",
+        "yt_competition is ours, from the YouTube results (youtube-demand). The same term can sit in "
+        "Onboarding's and in Recon's memory: a reader takes the record with the later as_of. "
+        "yt_interest compares only within one measurement's anchored set (youtube-demand), so a "
+        "ranking across terms reads them from one run's measurement, not from records of different "
+        "runs.",
     fields={
         "term": req(_text, "the keyword as searched"),
         "source": req(_text, "where it came from: dataforseo, trends, competitor, owner"),
@@ -294,7 +300,8 @@ kind(Kind(
         "as_of": req(_date, "the snapshot's day"),
         "views_per_day": req(_float(0), "views gained per day between the last two snapshots"),
         "anomaly": req(_enum("none", "spike", "drop"), "the anomaly flag of youtube-metrics"),
-        "source": req(_text, "data-api"),
+        "source": req(_text, "data-api; views-per-age when only one snapshot exists (a lifetime average, "
+                             "not a measured rate)"),
     },
     make_key=lambda d: f"velocity:{d['video_id']}",
 ))
@@ -311,7 +318,8 @@ kind(Kind(
         "as_of": req(_date, "the day the numbers describe"),
         "available": req(_bool, "false when the export gave nothing for this video"),
         "impressions": opt(_int(0), "thumbnail impressions"),
-        "ctr": opt(_fraction, "impression click-through rate, a fraction 0..1"),
+        "ctr": opt(_fraction, "impression click-through rate, a fraction 0..1; absent with "
+                              "available=true when the Reporting file's scale is not settled yet"),
         "source": req(_enum("reporting-api", "studio-export"), "where the numbers came from"),
     },
     make_key=lambda d: f"studio:{d['video_id']}",
@@ -324,9 +332,11 @@ kind(Kind(
     name="idea",
     key_doc="idea:<slug(title)>",
     writer="Recon",
-    readers="Planning, the creation recipes",
-    doc="A video idea grounded in a keyword. Its status moves forward only; Planning reads it and "
-        "writes its own plan record rather than editing this one (one writer per record).",
+    readers="Planning, Analytics, the creation recipes",
+    doc="A video idea grounded in a keyword. Recon alone moves its status, from Planning's plan and "
+        "the creation recipes' publish records: forward only, except that an idea whose only plan was "
+        "dropped (and that was never published) goes back to shortlisted. Planning writes its own plan "
+        "record rather than editing this one (one writer per record).",
     fields={
         "title": req(_text, "the working title"),
         "keyword": req(_text, "the seed keyword it targets"),
@@ -334,7 +344,7 @@ kind(Kind(
         "thumbnail": req(_text, "the thumbnail concept, one sentence"),
         "format": req(FORMAT, "long, short, live or post"),
         "status": req(IDEA_STATUS, "new, shortlisted, planned, rejected, published"),
-        "source": req(_text, "what grounded it: watch:<id>, trend, seed:<slug>, owner"),
+        "source": req(_text, "what grounded it: watch:<id>, trend, seed:<slug>, owner, community"),
         "score": opt(_float(0, 100), "0-100, from youtube-strategy's score_idea.py"),
         "note": opt(_text, "anything the next reader needs"),
     },
@@ -345,7 +355,7 @@ kind(Kind(
     name="plan",
     key_doc="plan:<YYYY-MM-DD>:<slot>",
     writer="Planning",
-    readers="the creation recipes, Analytics",
+    readers="the creation recipes, Analytics, Recon",
     doc="A slot in the calendar. Several per day are allowed: the slot names it (main, short-1). "
         "Planning sets published itself when it finds the matching publish record.",
     fields={
@@ -353,7 +363,10 @@ kind(Kind(
         "slot": req(_slug, "the slot of that day: main, short-1, live"),
         "title": req(_text, "the planned title"),
         "format": req(FORMAT, "long, short, live or post"),
-        "status": req(_enum("planned", "in-progress", "published", "dropped"), "where it stands"),
+        "status": req(_enum("planned", "in-progress", "published", "dropped"),
+                      "where it stands; in-progress is reserved (no recipe of the set writes it). A slot "
+                      "with no publish 14 days after its date is dropped; a later publish moves it to "
+                      "published"),
         "idea": opt(_slug, "the idea's slug, when it comes from one"),
         "source": req(_text, "planning"),
     },
@@ -363,8 +376,8 @@ kind(Kind(
 kind(Kind(
     name="publish",
     key_doc="publish:<videoId>",
-    writer="the creation recipes",
-    readers="Analytics, Planning",
+    writer="the creation recipes (e.g. Create Music Release)",
+    readers="Analytics, Planning, Recon",
     doc="A video this channel published, with what it came from — the link that lets Analytics "
         "judge an idea and Planning close its slot.",
     fields={
@@ -372,8 +385,9 @@ kind(Kind(
         "published_at": req(_datetime, "when"),
         "format": req(FORMAT, "long, short, live or post"),
         "title": req(_text, "the title it went out with"),
-        "plan": opt(_match(re.compile(r"^plan:\d{4}-\d{2}-\d{2}:[a-z0-9-]+$"), "a plan key"), "the plan slot"),
-        "idea": opt(_slug, "the idea's slug"),
+        "plan": opt(_match(re.compile(r"^plan:\d{4}-\d{2}-\d{2}:[a-z0-9-]+$"), "a plan key"),
+                    "the plan slot, as its full key plan:<date>:<slot>"),
+        "idea": opt(_slug, "the idea's slug, without the idea: prefix"),
         "source": req(_text, "the recipe that published it"),
     },
     make_key=lambda d: f"publish:{d['video_id']}",

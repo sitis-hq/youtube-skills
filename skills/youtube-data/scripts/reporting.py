@@ -3,7 +3,7 @@
 
   reporting.py jobs                                   the reporting jobs of the connected channel
   reporting.py ensure-job                             create the reach job once (first data in ~48 h)
-  reporting.py reach --ctr-scale fraction|percent [--since DATE] [--id ID ...] [--all-days]
+  reporting.py reach --ctr-scale fraction|percent|unknown [--since DATE] [--id ID ...] [--all-days]
                                                       per video and day: impressions and CTR as
                                                       `studio` record fields
 
@@ -16,7 +16,9 @@ CSV per day about two days later, plus 30 days of history at creation; standard 
 The docs call video_thumbnail_impressions_ctr "the percentage of impressions that resulted in a
 click" and define it as clicks / impressions, without saying whether the file holds 0.045 or 4.5.
 Until one real file has been compared with Studio, the scale is the caller's statement
-(--ctr-scale), not this script's guess; a value that contradicts it is refused.
+(--ctr-scale), not this script's guess; a value that contradicts it is refused. `unknown` keeps
+impressions, which do not depend on the scale, leaves CTR out of every record, and reports the
+largest raw CTR value read (`ctr_raw_max`): above 1 proves the file holds percent.
 """
 
 from __future__ import annotations
@@ -64,18 +66,20 @@ def parse_reach_csv(text: str, scale: str) -> list[dict[str, Any]]:
     for r in csv.DictReader(io.StringIO(text)):
         try:
             impressions = int(float(r["video_thumbnail_impressions"] or 0))
-            ctr = float(r["video_thumbnail_impressions_ctr"] or 0)
+            raw = float(r["video_thumbnail_impressions_ctr"] or 0)
         except (KeyError, ValueError):
             raise Refusal("a reach report lacks video_thumbnail_impressions / _ctr columns; "
                           f"its header is {list(r)}") from None
-        if scale == "percent":
-            ctr /= 100
-        if not 0 <= ctr <= 1:
+        ctr: float | None = raw / 100 if scale == "percent" else raw
+        if scale == "unknown":
+            ctr = None
+        elif not 0 <= ctr <= 1:
             raise Refusal(f"CTR {r['video_thumbnail_impressions_ctr']} for {r.get('video_id')} is "
                           f"not a {scale} — --ctr-scale is wrong for this file")
         d = r.get("date", "")
         day = f"{d[:4]}-{d[4:6]}-{d[6:8]}" if len(d) == 8 and d.isdigit() else d
-        rows.append({"video_id": r.get("video_id"), "date": day, "impressions": impressions, "ctr": ctr})
+        rows.append({"video_id": r.get("video_id"), "date": day, "impressions": impressions, "ctr": ctr,
+                     "ctr_raw": raw})
     return rows
 
 
@@ -87,7 +91,8 @@ def aggregate(rows: list[dict[str, Any]]) -> dict[tuple[str, str], dict[str, Any
         k = (r["video_id"], r["date"])
         agg = out.setdefault(k, {"impressions": 0, "clicks": 0.0})
         agg["impressions"] += r["impressions"]
-        agg["clicks"] += r["impressions"] * r["ctr"]
+        if r["ctr"] is not None:
+            agg["clicks"] += r["impressions"] * r["ctr"]
     return out
 
 
@@ -122,9 +127,11 @@ def cmd_reach(client: _yt.Client, a: argparse.Namespace) -> dict[str, Any]:
     agg = aggregate(rows)
     records = []
     for (vid, day), v in sorted(agg.items()):
-        ctr = round(v["clicks"] / v["impressions"], 6) if v["impressions"] else 0.0
-        records.append({"video_id": vid, "as_of": day, "available": True,
-                        "impressions": v["impressions"], "ctr": ctr, "source": "reporting-api"})
+        record = {"video_id": vid, "as_of": day, "available": True, "impressions": v["impressions"],
+                  "source": "reporting-api"}
+        if a.ctr_scale != "unknown":
+            record["ctr"] = round(v["clicks"] / v["impressions"], 6) if v["impressions"] else 0.0
+        records.append(record)
     if not a.all_days:
         newest: dict[str, dict[str, Any]] = {}
         for r in records:
@@ -134,8 +141,11 @@ def cmd_reach(client: _yt.Client, a: argparse.Namespace) -> dict[str, Any]:
     latest_day = days[-1] if days else None
     missing = [{"video_id": v, "as_of": latest_day, "available": False, "source": "reporting-api"}
                for v in sorted(wanted - {r["video_id"] for r in records})] if latest_day else []
+    out_units = ({"ctr": "left out: the scale is unknown"} if a.ctr_scale == "unknown"
+                 else {"ctr": "a fraction 0..1, as the studio record wants"})
     return {"ok": True, "reports_read": len(latest), "records": records + missing,
-            "units": {"ctr": "a fraction 0..1, as the studio record wants"},
+            "ctr_raw_max": max((r["ctr_raw"] for r in rows), default=None),
+            "units": out_units,
             "note": "each element is the fields of a `studio` record; videos asked for with no row "
                     "come back available=false"}
 
@@ -147,8 +157,8 @@ def parser() -> argparse.ArgumentParser:
     sub.add_parser("jobs", help="list reporting jobs")
     sub.add_parser("ensure-job", help=f"create the {REACH} job when it is missing")
     r = sub.add_parser("reach", help="impressions and CTR per video and day")
-    r.add_argument("--ctr-scale", required=True, choices=["fraction", "percent"],
-                   help="how the file writes CTR; see the module help")
+    r.add_argument("--ctr-scale", required=True, choices=["fraction", "percent", "unknown"],
+                   help="how the file writes CTR; unknown leaves CTR out (see the module help)")
     r.add_argument("--since", help="only reports for days from this date")
     r.add_argument("--id", action="append", help="only these videos; repeatable or a comma list")
     r.add_argument("--all-days", action="store_true", help="every day, not only each video's newest")

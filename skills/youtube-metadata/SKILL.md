@@ -1,6 +1,6 @@
 ---
 name: youtube-metadata
-description: Write and check a video's titles, description, tags, hashtags, chapters and Shorts metadata, and plan thumbnail/title A/B tests (Test & Compare, judged by watch time). One generic rule set for every channel type — identity names kept verbatim, keywords from demand data, fixed parts from the recipe; check_metadata.py lints YouTube's hard limits. Use when a step writes or repackages metadata (Planning & optimization, the creation recipes) or prepares an A/B test.
+description: Write and check a video's titles, description, tags, hashtags, chapters and Shorts metadata, and plan thumbnail/title A/B tests (Test & Compare, judged by watch time). One generic rule set for every channel type — identity names kept verbatim, keywords from demand data, fixed parts from the recipe; check_metadata.py lints YouTube's hard limits; apply_video.py applies an approved change to a published video under an intent. Use when a step writes or repackages metadata (Planning & optimization, the creation recipes) or prepares an A/B test.
 ---
 
 # YouTube metadata
@@ -51,6 +51,28 @@ ascending, ≥ 10 s each, last one inside `--duration`); a `--require-token` mis
 `warnings` are our rules: keyword missing from the title or starting after character 40, missing
 from the description's first 150 characters, `#` in tags, duplicate tags, a URL in a Short's
 description. `facts` gives lengths, bytes, the hashtags found and the parsed chapters.
+
+## Applying to a published video
+
+After the owner's yes, a change goes out through one script; each command claims its intent key
+itself (`metadata:video:<id>:<desired state>`, `thumbnail:video:<id>:<image>`), so a repeated run
+skips:
+
+```bash
+python3 <base>/scripts/apply_video.py metadata --video-id <id> --desired meta.json --dry-run   # show the owner the diff
+python3 <base>/scripts/apply_video.py metadata --video-id <id> --desired meta.json
+python3 <base>/scripts/apply_video.py thumbnail --video-id <id> --image thumb.jpg
+```
+
+- `meta.json` holds only the fields to set, out of `title`, `description`, `tags` (a list),
+  `defaultLanguage`; lint it with `check_metadata.py` first. The script sends the whole snippet back
+  (`videos.update` deletes what a request leaves out), so nothing else is lost.
+- A thumbnail is JPEG or PNG, at least 640 px wide, at most 50 MB; the API cannot read it back, so
+  look at the watch page after.
+- `"uncertain": true` → do not retry; check the video and tell the owner. `"fallback": "studio"` →
+  the connection lacks the scope; there is no Studio playbook for a video's details, so stop that
+  change and ask the owner to make it by hand (the output's `playbook` says so).
+- Costs: videos.list 1 unit, videos.update and thumbnails.set 50 each.
 
 ## Shorts
 

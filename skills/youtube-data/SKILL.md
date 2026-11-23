@@ -28,7 +28,7 @@ the owner connects YouTube on the project's credentials page — ask them.
 | Traffic sources | `analytics.py traffic [--id ...] --start D --end D` | Analytics quota |
 | Retention curve → CSV for retention.py | `analytics.py retention --id ID --start <published> --end D --duration <duration_s> --csv retention-ID.csv` | Analytics quota |
 | Anything else in Analytics (audience, revenue) | `analytics.py query --metrics ... --dimensions ... --filters ...` | Analytics quota |
-| Thumbnail impressions and CTR of own videos | `reporting.py ensure-job` once, then `reporting.py reach --ctr-scale <scale> --id ...` | Reporting API |
+| Thumbnail impressions and CTR of own videos | `reporting.py ensure-job` once, then `reporting.py reach --ctr-scale fraction\|percent\|unknown --id ...` (`unknown`: impressions only, plus `ctr_raw_max`) | Reporting API |
 | Each channel's median views of its latest uploads and its subscribers, before the channel is connected (niche research) | `channel_baselines.py --serp F [--serp F2 ...] --out baselines.json` or `--channel-id UC...`; resumable, stops on 429 | none (yt-dlp, public pages) |
 | Transcript (srt keeps timings) | `transcript.py --id ID --lang <channel language> --out ID.srt` | none (yt-dlp) |
 | Competitor or own thumbnails | `thumbnails.py --id ID ... --out-dir thumbs/` | none (public files) |

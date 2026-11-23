@@ -74,9 +74,13 @@ Reach reports (channel reports page of the Reporting API):
 counted when the thumbnail is shown more than 1 second with at least 50 % visible.
 `video_thumbnail_impressions_ctr`: "the percentage of impressions that resulted in a click to
 watch", calculated as clicks / impressions. **Whether the file holds 0.045 or 4.5 is not stated.**
-`reporting.py reach` therefore takes `--ctr-scale fraction|percent` from the caller and refuses a
+`reporting.py reach` therefore takes `--ctr-scale fraction|percent|unknown` from the caller and refuses a
 value that contradicts it (above 1 with `fraction`). The first time a recipe reads a real file,
-compare one video's CTR with Studio's figure for the same day, then fix the flag in the recipe.
+compare one video's CTR with Studio's figure for the same day, and keep the finding as data (not
+in the recipe's text).
+`unknown` writes impressions only and reports `ctr_raw_max`, the largest raw value read: above 1
+proves the file holds percent. A run that settles the scale keeps the evidence (YouTube Daily data
+writes it to `ctr-scale-check.md`).
 
 How the bulk API works (reports overview page):
 

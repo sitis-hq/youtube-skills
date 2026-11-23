@@ -10,7 +10,7 @@
 """Rank videos by how far each beat — or fell short of — its OWN channel's median views.
 
   swipe.py videos.json                         outliers upward, 3x the channel median or more
-  swipe.py videos.json --direction down        under-performers, 0.5x or less
+  swipe.py videos.json --direction down        under-performers, a third of the median or less
   swipe.py videos.json --direction both --min 2 --max 0.4
 
 Raw view counts rank channel size, not ideas: 400k views on a channel whose median is 30k is the
@@ -106,7 +106,8 @@ def main(argv: list[str] | None = None) -> dict[str, Any]:
     p.add_argument("--direction", choices=["up", "down", "both"], default="up")
     p.add_argument("--min", type=float, default=3.0,
                    help="upward: multiple at or above this (3, the outlier line of youtube-strategy thresholds.md)")
-    p.add_argument("--max", type=float, default=0.5, help="downward: multiple at or below this (0.5)")
+    p.add_argument("--max", type=float, default=1 / 3,
+                   help="downward: multiple at or below this (1/3: the outlier line of youtube-strategy thresholds.md, both ways)")
     p.add_argument("--lang", default="en", help="the titles' language; formulas exist for en only")
     a = p.parse_args(argv)
     if a.direction in ("up", "both") and a.min <= 1:

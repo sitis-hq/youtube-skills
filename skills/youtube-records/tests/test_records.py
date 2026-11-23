@@ -59,9 +59,13 @@ class Refusals(unittest.TestCase):
         self.assertIn("must not carry", self.check("studio", video_id=VIDEO, as_of="2026-11-04",
                                                    available="false", ctr="0.04", source="studio-export"))
 
-    def test_available_data_carries_both_numbers(self):
-        self.assertIn("needs both", self.check("studio", video_id=VIDEO, as_of="2026-11-04",
-                                               available="true", ctr="0.04", source="reporting-api"))
+    def test_available_data_carries_impressions_and_ctr_only_with_a_settled_scale(self):
+        self.assertIn("needs impressions", self.check("studio", video_id=VIDEO, as_of="2026-11-04",
+                                                      available="true", ctr="0.04", source="reporting-api"))
+        # Impressions alone: the Reporting file's CTR scale is not settled yet.
+        _, data = records.build("studio", dict(video_id=VIDEO, as_of="2026-11-04", available="true",
+                                               impressions="120", source="reporting-api"))
+        self.assertNotIn("ctr", data)
 
     def test_an_unknown_field_is_refused_rather_than_stored(self):
         self.assertIn("no field", self.check("velocity", video_id=VIDEO, as_of="2026-11-04",

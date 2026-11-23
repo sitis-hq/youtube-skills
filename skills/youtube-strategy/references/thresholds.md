@@ -48,6 +48,9 @@ is **not** on Help 13429240 as read 2026-11-04 — re-read the page before telli
 | Actions in a report | one main fix + at most two follow-ups | from youtube-agent-skill `yt-audit` ("ends in ONE fix"); upstream's "up to 5" diluted the priority |
 | Idea score | 0–100 by `scripts/score_idea.py` | defined scales (ideation.md); upstream's "/40" had none |
 | Shorts from a long video | 2–3 clip candidates per long-form slot when the channel runs Shorts | upstream calendar rule, kept as a planning prompt, not a requirement |
+| Stale `velocity` | its `as_of` more than 2 days before the run | Daily data runs daily; two missed runs mean the rate no longer describes the video. Every reader uses this row |
+| Stale `studio` | its `as_of` more than 4 days before the run | a `studio` record describes the run date − 2 by design (Reporting API and Studio lag two days), so 4 days is two missed runs |
+| Plan slot dropped | no `publish` 14 days after the slot's date; a later `publish` reopens it as published | a release can slip a week or two without being abandoned; Planning re-checks dropped slots of the last 60 days |
 | Data freshness | seed metrics older than 31 days are re-measured before ranking | DataForSEO Labs updates keyword metrics monthly (Labs keyword_overview docs, 2026-11-04) |
 
 ## Secondary (context only)

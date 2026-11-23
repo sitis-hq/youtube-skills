@@ -271,6 +271,17 @@ class Reporting(Patched):
         out = reporting.main(["reach", "--ctr-scale", "percent"])
         self.assertEqual([(r["as_of"], r["ctr"]) for r in out["records"]], [("2026-11-02", 0.02)])
 
+    def test_an_unknown_scale_keeps_impressions_and_leaves_ctr_out(self):
+        self.use(Fake(self.handler))
+        out = reporting.main(["reach", "--ctr-scale", "unknown", "--all-days"])
+        first = out["records"][0]
+        self.assertEqual(first["impressions"], 4000)
+        self.assertNotIn("ctr", first)
+        # The raw values are 4.5 and 1.5: above 1, so the file holds percent.
+        self.assertEqual(out["ctr_raw_max"], 4.5)
+        for r in out["records"]:
+            records.build("studio", r)
+
     def test_a_scale_the_file_contradicts_is_refused(self):
         with self.assertRaises(Refusal):
             reporting.parse_reach_csv(REACH_CSV, "fraction")
