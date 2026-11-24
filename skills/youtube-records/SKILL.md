@@ -64,3 +64,8 @@ calls `ai-integration upsert-template-record` only for a valid record. Output is
   A recipe that needs them declares them, and a run without them pauses and asks the owner.
 - A record carries `"v": 1`. A reader that meets another version stops and reports it rather than
   guessing.
+- **A foreign key is skipped, not a stop.** A prefix query can return another recipe's own state that
+  shares the prefix (Create Music Release keeps `publish:distrokid:<song>`). `records.py validate`
+  answers it with `"foreign": true` and exit 3, before any version check: the reader leaves it out,
+  counts it under "foreign" in its inputs, and goes on. Only a record of the contract's key shape
+  with another `v` stops the step.

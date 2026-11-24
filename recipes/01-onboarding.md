@@ -4,8 +4,8 @@ Follow [the rules of the set](README.md); this brief adds what is specific to On
 
 **Name:** `YouTube Onboarding` · **Scope:** global recipe, run inside the channel's own project ·
 **Schedule:** none — started by hand, once per channel; steps 1–7 again when the Channel Audit
-decides a shift of niche or a repositioning · **Reads from:** "YouTube Channel Audit", when it exists (its brief adds
-the declaration).
+decides a shift of niche or a repositioning · **Reads from:** "YouTube Channel Audit" and "YouTube Planning", when they
+exist (their briefs add the declarations; steps 16–17 read Planning).
 
 ## What it is for
 
@@ -100,7 +100,15 @@ channel is an existing one: point 1 asks the owner only to confirm the topic, po
 history again, and the audit's cause shapes the candidates (falling demand → adjacent topics with
 demand; a concentrated niche → smaller or less crowded neighbours; an audience that does not want
 the topic → topics of the history's groups that worked). Steps 2–6 follow as on a first run; step 7
-rewrites `profile:channel` with the new niche. Steps 8–18 are not re-run.
+rewrites `profile:channel` with the new niche.
+
+The platform cannot run only part of a recipe: every step starts when the one before it passes, so
+a re-run of step 1 reaches step 18. The re-run is therefore marked, and the later steps read the
+mark. Step 1 writes `"rerun": {"audit_quarter": "<quarter>", "steps": "1-7"}` into
+`niche-candidates.json`. **Steps 8–18 start by reading the newest `niche-candidates.json` of this
+run** (step "Niche discovery"); when it carries `rerun`, the step does nothing else and completes
+with one line, "re-run after the audit of <quarter>: not repeated" — no message to the owner, no
+claim, no change on the channel.
 
 Popularity is not what makes a niche hard. A niche is hard when a few channels hold its top, when
 the top is old, and when small channels never break through; a popular niche that is spread out and
@@ -212,7 +220,8 @@ ranked against the others later.
 4. Run `youtube-demand: scripts/normalize.py` on them with `--anchor <that term>`. It puts every
    request on one scale and refuses several requests without an anchor. Each row it prints carries
    the arguments for `records.py write seed`; write every row.
-5. Write `seed-keywords.json`, mirroring what was written.
+5. Write `seed-keywords.json`, mirroring what was written, with `anchor`: the anchor term of point
+   2. Recon measures every later week against the same term, so it reads it from here.
 
 Validator rubric:
 - at least 20 seeds;
@@ -308,7 +317,11 @@ Validator rubric:
 **16 — Apply branding.**
 
 Onboarding applies the channel's first state once. After "YouTube Planning" has run, channel changes
-are Planning's: do not re-run steps 16–17, whose desired state is older and would undo Planning's.
+are Planning's: steps 16–17 must not apply an older desired state over Planning's. So each of them
+first reads Planning's memory (declared; `query-template-records --key-prefix claim:settings:` and
+`claim:metadata:` on "YouTube Planning"): any committed intent there → the step applies nothing and
+completes with "Planning owns the channel's changes since <date>". Planning not declared, or no
+such intent → the step applies as written.
 
 1. Apply the approved banner, the watermark (if the brand profile has one) and
    `channel-settings.json` through `youtube-channel-setup: scripts/apply_channel.py`.

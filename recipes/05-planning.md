@@ -165,12 +165,15 @@ it, and writes down what is missing; later steps do not query other recipes agai
      `accepted` or `changed`; an audit the owner has not answered yet, or an older quarter's
      decision, is named in `inputs.md` and not acted on. A counting decision steers the month:
      `routes_to` `planning` (rung 1, repackaging) → step 5 takes the videos in its `videos` first and
-     step 9 tests them, in the first Planning run after the answer only (an earlier `inputs.md` of
-     this recipe that names the decision as applied means it was done; report it instead);
+     step 9 tests them, in the first Planning run after the answer only: step 8 writes
+     `audit-applied.json` (`{"quarter", "date"}`) when it applied them, and this step reads the
+     newest one of this recipe's earlier runs (step "Apply the approved changes") — the same quarter
+     there means it was done; report it instead;
      `creation` (rungs 2–3: intro, format, length) → step 4 writes the change into every slot it
      concerns, each month until the decision's `judge_after` is reached; `onboarding` or `owner` →
      Planning changes nothing of its own and names the pending decision. Not declared or none → "no
-     audit decision" and go on.
+     audit decision" and go on. Write the decision and what it steers into `inputs.json` under
+     `audit`, so steps 4, 5 and 9 read it from there.
    - From this recipe's own earlier runs: `ab-variants.json` and every `ab-test-<videoId>.json`
      (step 9), so steps 5 and 9 know which tests are running. Also `apply-report.md` (step 8),
      so step 5 knows what was changed recently.
@@ -365,8 +368,10 @@ step 5 named, and nothing else.
    - A long video without chapters gets drafted ones: `youtube-data: scripts/transcript.py --id …
      --lang <profile language>` (needs `yt-dlp`), then `chapters.py draft <id>.srt`. Rewrite the
      drafted labels before use.
-5. **Lint.** Lint each set with `youtube-metadata: scripts/check_metadata.py --file meta-<id>.json`
-   (duration, format and `require_tokens` included), and each title with its thumbnail text with
+5. **Lint.** Lint each set with `youtube-metadata: scripts/check_metadata.py --file meta-<id>.json
+   --format <long|short> --duration <s> --require-token <each identity token> --keyword <primary>`.
+   `meta-<id>.json` holds only what `apply_video.py` sets (title, description, tags,
+   defaultLanguage): any other field there makes the step-7 preview refuse it. Lint each title with its thumbnail text with
    `youtube-metrics: scripts/title.py`. Fix every error; fix or justify every warning.
 6. **Thumbnails** (when the leak is the package):
    - Download the current one with `youtube-data: scripts/thumbnails.py --id … --out-dir
@@ -465,6 +470,9 @@ another API client.
      page yet. Stop that change and tell the owner which one and why; do not improvise in Studio.
 5. Write `apply-report.md`: per change, its intent key, the outcome, the units used and the total
    of the run, and the thumbnail check. Do not retry anything that failed in this run.
+6. When `inputs.json` carries an audit decision routed to `planning` and this run applied changes to
+   its videos, write `audit-applied.json`: `{"quarter": <its quarter>, "date": <today>}`. Step 1 of
+   the next run reads it, so the decision is acted on once.
 
 **9 — Thumbnail A/B tests (optional).**
 
@@ -480,6 +488,9 @@ Follow `youtube-studio/references/ab-test.md` and `references/session.md`, with 
    - "Performed same" or "Inconclusive": that is a result. Keep the original, and do not re-run
      the pair.
 3. **Start the approved tests.** For each test approved in step 7:
+   - first query this recipe's memory with `query-template-records --key-prefix claim:ab:video:<id>:`:
+     any claim there (open, committed or failed) means the video has had its test — skip it and say
+     so. The key carries the date, so the claim alone would not stop a second test next month;
    - build the key with `youtube-studio: scripts/intent.py key ab --video-id <id> --date <today>`;
    - run `intent.py claim`;
    - upload the current thumbnail first and the candidates after it;
@@ -493,7 +504,8 @@ Follow `youtube-studio/references/ab-test.md` and `references/session.md`, with 
      claim open, do not retry, and report it to the owner. A later run's claim answers `claimed`
      and checks the video instead of starting a second test.
 4. Write `ab-variants.json`: the tests started this run, with their start dates and the variant
-   files.
+   files, and the tests left uncertain (claim open), so step 5 of the next run excludes their
+   videos too.
 
 ## Building it: reads, keys and schedule
 

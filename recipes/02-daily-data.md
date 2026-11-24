@@ -169,7 +169,8 @@ step: the newest one with a conclusion is the scale every run uses.
      only and reports `ctr_raw_max`, the largest raw CTR value read. Above 1 settles it as
      **percent** (a fraction cannot exceed 1); run `reach` again with `percent` for the records;
    - `ctr_raw_max` at most 1 is what a fraction and a CTR under 1 % share.
-     Compare with Studio: take the video-day with the most impressions, export that day from
+     Compare with Studio: take the video-day with the most impressions among those whose CTR is
+     above 0 (a 0 reads the same on both scales and settles nothing), export that day from
      Studio (the fallback below), and see which scale puts the Reporting value within 0.001 of
      Studio's fraction (Studio shows one decimal of a percent; the two scales differ 100 times);
    - write `ctr-scale-check.md` (video, day, the Reporting value as read, Studio's value, the scale,

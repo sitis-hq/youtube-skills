@@ -184,7 +184,7 @@ A row cites `<brief>: <steps>`. "Inside" means another script runs it, and no st
 | `youtube-demand` | `niches.py` | 1: 1; 3: 9; 7: 6 |
 | `youtube-demand` | `normalize.py` | 1: 6; 3: 3, 10; 5: 6 |
 | `youtube-demand` | `yt_competition.py` | inside `niches.py` and `normalize.py` |
-| `youtube-metadata` | `apply_video.py` | 5: 7, 8 |
+| `youtube-metadata` | `apply_video.py` | 5: 6, 7, 8 |
 | `youtube-metadata` | `check_metadata.py` | 1: 13; 5: 4, 6 |
 | `youtube-metrics` | `candidates.py` | 3: 4 |
 | `youtube-metrics` | `chapters.py` | 5: 6 |

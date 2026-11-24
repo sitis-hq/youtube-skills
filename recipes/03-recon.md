@@ -137,9 +137,13 @@ Verify before acting: every later step works on what this step found.
    each question, count, comment ids, videos, date range, the angle as Community wrote it, and the
    run dates of the files read.
 5. **Idea status.** Read every `plan:` record from Planning's memory and every `publish:` record
-   from each declared creation recipe's memory, and validate each. For each of Recon's `idea`
+   from each declared creation recipe's memory, and validate each; a key `records.py validate`
+   calls foreign (exit 3, such as `publish:distrokid:<song>`) is skipped and counted, never a stop.
+   For each of Recon's `idea`
    records, find:
-   - a `publish` record whose `idea` equals the idea's slug → the idea is `published`;
+   - a `publish` record whose `idea` equals the idea's slug, or whose `plan` names a plan whose
+     `idea` equals it (a creation recipe often knows the slot, not the idea) → the idea is
+     `published`;
    - else a `plan` record whose `idea` equals the slug, with status `planned` or `published` → the
      idea is `planned`;
    - else, when every `plan` record naming the slug is `dropped`, an idea now `planned` goes back
@@ -152,9 +156,13 @@ Verify before acting: every later step works on what this step found.
    match on one is listed as a conflict. Write `idea-status.json`: each idea whose status
    must move, its current and new status, and the `plan` or `publish` key that moves it. Step 11
    writes the changes.
-6. The run's **anchor term** for every Trends request is Onboarding's: the main term of
-   `profile:channel`'s `niche` — the term Onboarding anchored its seed set on. It is the same every
-   week, and step 10 writes it into `keywords.json` as `anchor`. Planning takes `yt_interest` (and
+6. The run's **anchor term** for every Trends request is the one Onboarding anchored its seed set
+   on: `anchor` in Onboarding's `seed-keywords.json` (step "Seed keywords"). A file without
+   `anchor` (written before it was recorded) → the term present in every Trends request Onboarding
+   saved in that step; only when neither exists, the main term of `profile:channel`'s `niche`. It
+   is the same every week, and step 10 writes it into `keywords.json` as `anchor`. An anchor that
+   reads 0 in every request cannot put the terms on one scale: step 10 then stops its Trends part
+   and tells the owner, rather than writing a scale of zeros. Planning takes `yt_interest` (and
    the other seed measures) from Recon's newest `keywords.json`, so it has to be one scale.
 7. Choose the run's **main terms** (at most 10): Onboarding's and Recon's seeds with the highest
    `yt_interest` and `volume`, one per content pillar where the seeds allow; with no seeds, the

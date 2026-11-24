@@ -449,9 +449,35 @@ def build(kind_name: str, raw: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     return k.make_key(data), data
 
 
+_V, _C, _S = r"[A-Za-z0-9_-]{11}", r"[A-Za-z0-9_-]{10,}(\.[A-Za-z0-9_-]{10,})?", r"[a-z0-9]+(-[a-z0-9]+)*"
+# The shape of each kind's key. A key under a kind's prefix that does not have this shape is not a
+# record of this contract at all — another recipe's own state that happens to share the prefix
+# (Create Music Release keeps publish:distrokid:<song>) — so it is foreign: skipped and counted,
+# never a reason to stop.
+KEY_SHAPES = {
+    "profile": re.compile(r"^profile:channel$"),
+    "seed": re.compile(rf"^seed:{_S}$"),
+    "watch": re.compile(rf"^watch:{_V}$"),
+    "velocity": re.compile(rf"^velocity:{_V}$"),
+    "studio": re.compile(rf"^studio:{_V}$"),
+    "idea": re.compile(rf"^idea:{_S}$"),
+    "plan": re.compile(rf"^plan:\d{{4}}-\d{{2}}-\d{{2}}:{_S}$"),
+    "publish": re.compile(rf"^publish:{_V}$"),
+    "replied": re.compile(rf"^replied:{_C}:(reply|pin|heart|hide|report)$"),
+}
+
+
+class Foreign(Refusal):
+    """A key that only shares a kind's prefix; the reader skips it."""
+
+
 def validate_stored(key: str, data: dict[str, Any]) -> str:
     """Check a record read back from memory; return its kind."""
     kind_name = key.split(":", 1)[0]
+    shape = KEY_SHAPES.get(kind_name)
+    if shape is None or not shape.match(key):
+        raise Foreign(f"{key!r} is not a {kind_name} record of this contract "
+                      f"({KINDS[kind_name].key_doc if kind_name in KINDS else 'unknown kind'}): skip it and count it")
     if data.get("v") != SCHEMA_VERSION:
         raise Refusal(f"{key} has schema version {data.get('v')!r}; this file reads {SCHEMA_VERSION}")
     fields = {k: v for k, v in data.items() if k != "v"}
@@ -599,6 +625,10 @@ def main(argv: list[str] | None = None) -> int:
                 ids = run_ids(args)
                 result = upsert(key, data, ids, args.spec_task_id)
                 out = {"ok": True, "key": key, "data": data, "written": result}
+    except Foreign as e:
+        # Exit 3, apart from 2: a reader skips a foreign key and goes on; it stops only on a version.
+        print(json.dumps({"ok": False, "foreign": True, "error": str(e)}, ensure_ascii=False))
+        return 3
     except Refusal as e:
         print(json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False))
         return 2

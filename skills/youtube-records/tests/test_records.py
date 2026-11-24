@@ -195,5 +195,25 @@ class Writing(unittest.TestCase):
         self.assertEqual(out["data"]["identity_token"], ["Dustin Vane", "Neon Hearts"])
 
 
+class ForeignKeys(unittest.TestCase):
+    def test_another_recipes_state_under_the_prefix_is_foreign(self):
+        with self.assertRaises(records.Foreign):
+            records.validate_stored("publish:distrokid:city-alive", {"status": "published"})
+
+    def test_foreign_comes_before_the_version_and_exits_3(self):
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            code = records.main(["validate", "--key", "publish:distrokid:x", "--data", "{}"])
+        self.assertEqual(code, 3)
+        self.assertTrue(json.loads(buf.getvalue())["foreign"])
+
+    def test_a_contract_key_with_another_version_still_stops(self):
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            code = records.main(["validate", "--key", "publish:abcdefghijk", "--data", '{"v": 2}'])
+        self.assertEqual(code, 2)
+        self.assertNotIn("foreign", json.loads(buf.getvalue()))
+
+
 if __name__ == "__main__":
     unittest.main()
