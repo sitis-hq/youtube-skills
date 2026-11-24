@@ -252,7 +252,10 @@ Send the owner the decision in plain words with `send-message`: the cause in one
 evidence in three numbers, the action, how and when it will be judged, and where it goes next.
 Buttons: "Accept" (recommended), "Decline" and "Discuss". Then `await-reply`.
 
-- Accepted, `routes_to` `planning` or `creation` → Planning picks it up on the 1st; say so.
+- Accepted, `routes_to` `planning` or `creation` → Planning picks it up on the 1st; say so. A
+  creation recipe that does not declare a read of "YouTube Planning" never sees the calendar: for
+  it, name the recipe and the step to change, and give the owner the change as a prompt for the
+  recipe editor.
 - Accepted, `onboarding` → ask the owner to re-run steps 1–7 of the channel's YouTube Onboarding;
   those steps read this audit.
 - Accepted, `owner` (a new channel) → the owner starts it; this channel goes on with the follow-ups.
