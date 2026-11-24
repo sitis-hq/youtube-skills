@@ -188,7 +188,11 @@ history and come back if the channel returns to that niche — and never mixes t
 `audit-decision.json` carries `audit_id` (the audit run's date) and, when it replaces a decision of
 an earlier audit that was never answered, `supersedes` (that audit's id). A reader acts on a
 decision only when its `audit_id` is the newest audit's and its `owner_answer.answer` is `accepted`
-or `changed`. A newer audit makes every older decision history, answered or not.
+or `changed`. A newer audit makes every older decision history, answered or not. A decision written before
+`audit_id` existed takes as its id the date of the "Diagnosis and decision" run that wrote it.
+
+A seed's key is its term alone (`seed:<slug(term)>`), so a term measured again for a new niche is
+rewritten with that niche: the old niche keeps every term the new one does not share.
 
 ### 14. Changing a recipe
 
