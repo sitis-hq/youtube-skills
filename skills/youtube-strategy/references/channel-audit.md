@@ -42,7 +42,11 @@ which rows of the table it could not test.
 3. A viral spike is not the baseline: a video at 10× or more of its group's median (`thresholds.md`,
    Spike) is left out of the median, and its traffic is read as "viewers who may not return" (Help
    141805).
-4. A group of fewer than 5 videos is "too few to judge" (`thresholds.md`).
+4. A group of fewer than 5 videos is "too few to judge" (`thresholds.md`). When every group is, the
+   decision is not a fix: a young channel needs a "critical mass of content" (Help 16559651) — one
+   topic, a growing library, judged at the next audit.
+5. A window that crosses a change in how views are counted (`thresholds.md`, Secondary) is named;
+   Shorts are compared on engaged views where the data gives them.
 
 ## 2. The four constraints, in this order
 
@@ -54,7 +58,10 @@ one; later ones are reported, not acted on.
    openness of the channel's terms now against Onboarding's numbers. Fit: the subscriptions-feed
    CTR and views of each topic cluster against the channel's median.
 2. **Click** — impressions are there, CTR is not. CTR per video against the group's median for the
-   same traffic source, never one channel-wide CTR. The 2–10 % band is a sanity bound only.
+   same traffic source, never one channel-wide CTR. The 2–10 % band is a sanity bound only. A Short
+   has no thumbnail click: its click is "Stayed to watch" and its reach "Shown in feed", both from
+   Studio, against the channel's own Shorts. A Short's first hundreds or thousands of views are a
+   test (Ritchie, 2024-04-04): one that stalls there lost in the feed, it was not suppressed.
 3. **Hold** — the Intro against the channel's typical for the same length band; then the middle of
    the curve (`slide`, `cliffs`).
 4. **Return** — casual and regular viewers, and subscribers lost against gained.
@@ -82,6 +89,9 @@ table; the judging counts are `thresholds.md` rows.
 | 14 | "shadow ban" suspected; recommendations still the main source | normal variance | run rows 1–6 | the traffic-source mix |
 | 15 | music: own uploads flat, the songs grow on Art Tracks and fan Shorts | not a stall: split measurement | judge on Analytics for Artists, both toggles | song-level viewers per release cycle |
 | 16 | music: views only in release weeks | release-only cadence | YouTube's artist playbook: trailer two weeks before, official-audio Shorts, related-video links, fan Shorts | Shorts reach and returning viewers between releases |
+| 17 | Shorts: "Shown in feed" near zero | the Short did not enter the feed | check its format (a 16:9 video is long-form), the Restrictions column and Content ID claims | Shown in feed of the next Shorts |
+| 18 | Shorts: shown in the feed, "Stayed to watch" below the channel's Shorts median | the first frame and seconds do not hold | change the hook and the first frame; never re-upload the same file (`thresholds.md`) | Stayed to watch against the median, 5 Shorts |
+| 19 | after a change of topic, old off-topic videos still get impressions and bring viewers who do not watch the new videos ("Popular with different audiences", traffic to old videos) | the old catalogue pulls recommendations to the old topic | unlist those videos, one by one, never delete; not when the channel is near a YPP threshold (hidden videos stop counting) | the new videos' impressions and CTR, the 4 weeks before against the 4 after |
 
 ## 4. The action ladder
 
@@ -92,6 +102,7 @@ packaging-before-content priority.
 1. repackage existing videos → 2. fix the first 30 seconds → 3. change format or length → 4. narrow
 the niche → 5. shift to an adjacent niche → 6. reposition the same channel → 7. start a new channel.
 
+- Hiding videos is not a rung: it is row 19 only, after a change of topic, with its evidence.
 - Never skip a rung without the row that justifies it. Steps 6 and 7 only when the same cause (rows
   4, 5, 10 or 11) holds over 10 or more videos (`thresholds.md`, destructive step gate).
 - Same audience → same channel; different audience → different channel (Ritchie, 2026-02-16).

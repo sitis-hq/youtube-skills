@@ -1,7 +1,7 @@
-# Viewer groups and Analytics for Artists
+# Viewer groups, the Shorts feed and Analytics for Artists
 
-Used by the Channel Audit. Neither has an API: the Analytics API has no new, casual or regular
-viewers, and Analytics for Artists is a Studio view. Read them in Studio under `YT_STUDIO_SESSION`,
+Used by the Channel Audit. None has an API: the Analytics API has no new, casual or regular
+viewers and no Shorts-feed numbers, and Analytics for Artists is a Studio view. Read them in Studio under `YT_STUDIO_SESSION`,
 after the session check (`session.md`).
 
 ## What YouTube defines (read 2026-11-23)
@@ -37,6 +37,19 @@ after the session check (`session.md`).
 
 A card that is not shown (too few viewers, or not offered to the channel) goes into `not_shown` with
 what Studio said. Never estimate a missing group.
+
+## The Shorts feed
+
+A Short has no thumbnail impressions: its reach is "Shown in feed" ("the number of times that your
+Shorts showed in the Shorts Feed", Help 12942217) and its click is "Stayed to watch" (viewed vs
+swiped away).
+
+1. Studio → **Analytics** → **Content** → **Shorts**, the audit period.
+2. For each Short of the period, open its analytics and read: Shown in feed, Stayed to watch (or
+   viewed vs swiped away), views and engaged views, average percentage viewed.
+3. Read the **Restrictions** column of Content → Shorts for each Short (copyright, Content ID).
+4. Write `shorts-feed.json`: per Short the numbers as shown, `restrictions`, and `not_shown` for
+   what Studio did not show. Never estimate a missing number.
 
 ## Analytics for Artists (music-artist channels)
 

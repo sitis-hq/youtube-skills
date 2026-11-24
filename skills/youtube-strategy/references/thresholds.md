@@ -54,6 +54,18 @@ statement known through a write-up). `channel-audit.md` builds on these rows.
 | Artist reach | Analytics for Artists separates "Official Artist Channel" (Art Tracks included) from "Other Channels" (fan videos whose main component is the song) | Help 18736729 |
 | Reach reports | the Reporting API keeps reports 60 days (historical ones 30); a new job gets the 30 days before its creation | developers.google.com/youtube/reporting (read 2026-11-23) |
 
+Added from the research on deleting and hiding videos (2026-11-24; quotes as it gives them):
+
+| Fact | Number or statement | Source |
+| --- | --- | --- |
+| Per-video judgement | "An individual video's underperformance does not penalize a channel overall"; what can hurt is a viewer repeatedly not watching the channel's videos when they are recommended; experimenting with formats "will not inherently confuse the algorithm"; a new channel needs a "critical mass of content" for viewers to watch next | Help 16559651 "Good to know about recommendations" |
+| Shorts' first views | the first hundreds or thousands of views of a Short are a test, "initial views are basically impressions"; a Short that loses in the feed goes no further | Rene Ritchie, "Rene's Top Five", blog.youtube 2024-04-04 |
+| Shorts' click | in the Shorts feed the click is "Stayed to watch" (viewed vs swiped away), which Ritchie called the Shorts analogue of CTR; "Shown in feed" = "the number of times that your Shorts showed in the Shorts Feed". No published threshold | Ritchie, same; Help 12942217 "Content tab analytics tips" |
+| Shorts viewers and long-form | the system links a viewer's interests across formats, but moving from Shorts to long-form "is not common behavior from viewers" | Help 16559651 |
+| Deleting and hiding | Todd Beaupré: "Don't delete videos unless you have a very, very good reason … keep your videos public or unlist them if you must"; deleting removes the channel's connection with that video's viewers. Ritchie: think three times before deleting, privating or unlisting "purely because you think it'll change your channel's performance" | blog.youtube "Rene's Top Five", 2024-03-28 |
+| What hiding does | private and unlisted videos leave the channel's Videos tab, search, recommendations and the subscriptions feed; unlisted can still sit in a channel section and play by link | Help 157177 |
+| Re-uploading own Shorts | re-uploading or re-using Shorts to pull more views "could be seen by the system as spam/abusive behavior"; make a better version instead | YouTube Liaison on X, 2023-08-09 (pre-2024) |
+
 ## Never recommended
 
 YouTube refutes these, so no report, audit or plan offers them as a growth lever. A step that is
@@ -62,7 +74,8 @@ about to write one of them stops and says which row forbids it.
 | Do not recommend | Why |
 | --- | --- |
 | Upload more often, or daily, to grow | cadence is not correlated with growth (Help 141805). Restoring output after a drop is different: fewer uploads are fewer chances, not a penalty — the audit's "volume" row |
-| Delete or private old weak videos | a weak video does not hurt the channel (Help 141805); no YouTube statement says deletion helps, and the video's history is lost |
+| Delete old videos; hide weak ones to lift the channel | a weak video does not hurt the channel (Help 141805, 16559651); Beaupré: don't delete, keep public or unlist "if you must" (2024-03-28); hidden videos stop counting for YPP. The one exception is targeted unlisting of off-topic videos that still bring an audience the new videos do not keep — `channel-audit.md`, row 19 |
+| Re-upload the same video or Short for more views | YouTube Liaison: it "could be seen by the system as spam/abusive behavior" (2023-08-09); a new version of the idea is not a re-upload |
 | Tags as a discovery lever | "not important" except misspellings (Help 141805, 146402) |
 | A shadow ban as the explanation | Ritchie: channels claiming one still get most traffic from recommendations (TubeTalk 2026-02-16); the one real per-channel reduction is unoriginal Shorts, above |
 | Re-uploading or publishing in a set hour for reach | publish time does not affect a video's long-term performance except Live and Premieres (Help 141805) |
@@ -107,6 +120,7 @@ is **not** on Help 13429240 as read 2026-11-04 — re-read the page before telli
 | --- | --- | --- |
 | Average CTR by traffic source: search 12.5 %, suggested 9.5 %, browse 3.5 %, external 2.8 % | Focus Digital, December 2025 (single agency) | only to explain why browse CTR must not be compared with search CTR |
 | Channels uploading 12+ times a month grew views faster | vidIQ study of 5.08 M channels | never as advice to upload more: YouTube finds cadence not correlated with growth (Help 141805). Cadence is set by what the channel can sustain |
+| Views are counted per start: Shorts since 2025-03-31 (the old count is now "engaged views"); long-form reportedly since 2026-08-24 | TechCrunch 2025-03-26 (Shorts); PPC Land 2026-09-02 (long-form, not on a YouTube page as read) | a baseline whose window crosses a counting change says so; use engaged views where the data gives them |
 | Ad rates are higher in Q4 and lowest in January | several marketing sources, no single study | qualitative: schedule monetisable topics into Q4; no percentage |
 
 ## Dropped, and why
@@ -127,6 +141,7 @@ is **not** on Help 13429240 as read 2026-11-04 — re-read the page before telli
 | Test winners "by CTR" | YouTube judges by watch time |
 | "4–6 % CTR is average, 10 %+ excellent", CTR tables by channel size | no source; YouTube publishes only the 2–10 % half-of-channels band (research 2026-11-23) |
 | "70 % still watching at 30 s is strong, under 50 % needs a fix" | no source; compare the Intro with the channel's own typical |
+| "70–80 % Stayed to watch is normal for Shorts" | community consensus with no method (research 2026-11-24); compare with the channel's own Shorts |
 | Shorts-to-long-form conversion rates ("under 10 %", "12–18 subscribers per 10 k views") | no source; YouTube publishes none |
 | "Galloway's 500-channel study: Shorts + long-form grew 2.8× faster" | no primary trace |
 | "The algorithm punishes a break", "the first hour decides", "a 20/50/80 % gradual pivot" | refuted by YouTube or reported to fail (rows above) |

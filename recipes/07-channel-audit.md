@@ -37,7 +37,7 @@ What it leaves behind:
 
 - **Records:** none. No record kind has the audit as its writer; its conclusions are artifacts.
 - **Artifacts:** `inputs.json`, `videos.json`, `baseline.json`, `click.json`, `hold.json`,
-  `retention-<videoId>.csv`, `viewer-groups.json`, `artist-reach.json` (music-artist channels),
+  `retention-<videoId>.csv`, `viewer-groups.json`, `shorts-feed.json`, `artist-reach.json` (music-artist channels),
   `return.json`, `market.json`, `previous-decision.md`, **`audit-YYYY-QN.md`** and
   **`audit-decision.json`**. Planning, Onboarding and the next audit find them with
   `list-step-artifacts`.
@@ -48,16 +48,17 @@ What it leaves behind:
 2. IF `profile:channel` is missing or invalid THEN system MUST stop and tell the owner that Onboarding has not run; IF any other producer has nothing THEN system MUST continue and state what that limits.
 3. WHEN the baseline is built THEN system MUST group the videos by format and length band, MUST compare each video's views at 7 and at 28 days with its group's median at the same age, MUST take a spike out of the median, and MUST call a group of fewer than 5 videos too few to judge.
 4. WHEN click is judged THEN system MUST ensure the combined reach job exists, MUST compare each video's CTR over its first 28 days with its group's median for the same traffic source, MUST read it from the Reporting API under the CTR scale Daily data settled and stop trusting CTR when the file contradicts that scale, MUST use the subscriptions feed as the control for topic and packaging, and MUST NOT judge on one channel-wide CTR.
-5. WHEN hold is judged THEN system MUST measure the Intro (share still watching at 30 s) and the middle of each curve with `retention.py`, against the channel's typical for the same length band.
-6. WHEN return is judged THEN system MUST read new, casual and regular viewers in Studio, and subscribers gained and lost from the Analytics API, and MUST write "no data" for what Studio does not show.
-7. WHEN the channel's type is `music-artist` THEN system MUST judge it at the song level across the official channel and other channels (Analytics for Artists), and MUST NOT apply talk-channel duration or Intro norms to music videos.
-8. WHEN the market is read THEN system MUST re-rank the channel's niche terms with `niches.py` and compare openness and demand with Onboarding's numbers.
-9. WHEN a previous audit exists THEN system MUST judge its decision on the metric and date it set before looking for a new constraint, and MUST NOT stack a new change on a decision that has not had its uploads yet.
-10. WHEN the decision is made THEN system MUST name exactly one row of the decision table and one rung of the action ladder, the videos it concerns, the metric to judge it and when, at most two follow-ups, a number with source and date for every claim, and the rows it could not test.
-11. WHEN the decision is a rung above 5 (repositioning or a new channel) THEN system MUST show that the same cause holds over 10 or more videos, and MUST leave the choice to the owner.
-12. WHEN anything is recommended THEN system MUST NOT recommend an item of `thresholds.md`'s "Never recommended".
-13. WHEN the audit ends THEN system MUST change nothing on the channel other than creating a missing Reporting API job, take no irreversible action and claim no intent, and MUST send the owner the decision with where it goes next.
-14. WHEN the owner answers THEN system MUST record the answer as accepted, declined or changed, with the date and the quarter, so that readers act only on an accepted decision of the newest audit.
+5. WHEN Shorts are judged THEN system MUST read their "Shown in feed" and "Stayed to watch" in Studio and compare them only with the channel's own Shorts, and MUST NOT read a Short that stalled after its first test views as suppression.
+6. WHEN hold is judged THEN system MUST measure the Intro (share still watching at 30 s) and the middle of each curve with `retention.py`, against the channel's typical for the same length band.
+7. WHEN return is judged THEN system MUST read new, casual and regular viewers in Studio, and subscribers gained and lost from the Analytics API, and MUST write "no data" for what Studio does not show.
+8. WHEN the channel's type is `music-artist` THEN system MUST judge it at the song level across the official channel and other channels (Analytics for Artists), and MUST NOT apply talk-channel duration or Intro norms to music videos.
+9. WHEN the market is read THEN system MUST re-rank the channel's niche terms with `niches.py` and compare openness and demand with Onboarding's numbers.
+10. WHEN a previous audit exists THEN system MUST judge its decision on the metric and date it set before looking for a new constraint, and MUST NOT stack a new change on a decision that has not had its uploads yet.
+11. WHEN the decision is made THEN system MUST name exactly one row of the decision table and one rung of the action ladder, the videos it concerns, the metric to judge it and when, at most two follow-ups, a number with source and date for every claim, and the rows it could not test.
+12. WHEN the decision is a rung above 5 (repositioning or a new channel) THEN system MUST show that the same cause holds over 10 or more videos, and MUST leave the choice to the owner.
+13. WHEN anything is recommended THEN system MUST NOT recommend an item of `thresholds.md`'s "Never recommended".
+14. WHEN the audit ends THEN system MUST change nothing on the channel other than creating a missing Reporting API job, take no irreversible action and claim no intent, and MUST send the owner the decision with where it goes next.
+15. WHEN the owner answers THEN system MUST record the answer as accepted, declined or changed, with the date and the quarter, so that readers act only on an accepted decision of the newest audit.
 
 ## Steps
 
@@ -70,7 +71,7 @@ attached to the recipe, as rule 2 says.
 | 2 | Videos and baseline | AI (scripts) | `youtube-data`, `youtube-metrics`, `youtube-strategy`, `yt-dlp` | `YOUTUBE_REFRESH_TOKEN` | `videos.json`, `baseline.json` |
 | 3 | Click by traffic source | AI (scripts) | `youtube-data`, `youtube-strategy` | `YOUTUBE_REFRESH_TOKEN` | `click.json` |
 | 4 | Hold | AI (scripts) | `youtube-data`, `youtube-metrics`, `youtube-strategy` | `YOUTUBE_REFRESH_TOKEN` | `retention-<videoId>.csv`, `hold.json` |
-| 5 | Return and viewer groups | AI (script + browser) | `youtube-data`, `youtube-studio` | `YOUTUBE_REFRESH_TOKEN`, `YT_STUDIO_SESSION` | `viewer-groups.json`, `artist-reach.json`, `return.json` |
+| 5 | Return, viewer groups and the Shorts feed | AI (script + browser) | `youtube-data`, `youtube-studio` | `YOUTUBE_REFRESH_TOKEN`, `YT_STUDIO_SESSION` | `viewer-groups.json`, `shorts-feed.json`, `artist-reach.json`, `return.json` |
 | 6 | The niche's market now | AI (scripts) | `youtube-demand`, `youtube-data`, `yt-dlp`, `dataforseo-mcp-server` | `DATAFORSEO_LOGIN`, `DATAFORSEO_PASSWORD` | `market.json` |
 | 7 | The previous decision | AI | `youtube-strategy` | — | `previous-decision.md` |
 | 8 | Diagnosis and decision | AI | `youtube-strategy` | — | `audit-YYYY-QN.md`, `audit-decision.json` |
@@ -168,16 +169,18 @@ exists; a creation recipe added later declares itself here (README rule 5).
 5. Music videos of a `music-artist` channel are compared only with the channel's own music videos.
 6. Write `hold.json`.
 
-**5 — Return and viewer groups.**
+**5 — Return, viewer groups and the Shorts feed.**
 
 1. Subscribers gained and lost per month over the last six full months: `youtube-data:
    scripts/analytics.py channel --by month --start <first day of the month six months back> --end
    <last day of the last full month>`. The month dimension needs whole months.
 2. Viewer groups in Studio, following `youtube-studio/references/viewer-groups.md`, after the
    session check (rule 8): `viewer-groups.json`.
-3. A `music-artist` channel: Analytics for Artists by the same reference, `artist-reach.json`. A
+3. The Shorts of the period, by the same reference ("The Shorts feed"): `shorts-feed.json`. Step 8
+   judges a Short's click on it, never on thumbnail CTR.
+4. A `music-artist` channel: Analytics for Artists by the same reference, `artist-reach.json`. A
    channel without the toggle is judged on its own uploads, and the file says so.
-4. Write `return.json`: gained, lost, net per month; the viewer groups and their change; for music,
+5. Write `return.json`: gained, lost, net per month; the viewer groups and their change; for music,
    song-level reach. What Studio did not show is "no data", never an estimate.
 
 **6 — The niche's market now.**

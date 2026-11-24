@@ -63,7 +63,7 @@ playlist's identity, and youtube-channel-setup's `apply_channel.py playlist` bui
 | Upload defaults | Onboarding | `references/upload-defaults.md` |
 | Channel settings, picture, name, handle, banner, watermark | Onboarding | `references/channel-profile.md` |
 | Home tab: featured videos, sections | Onboarding | `references/home-tab.md` |
-| New, casual and regular viewers; Analytics for Artists | Channel Audit | `references/viewer-groups.md` — Studio only, no API |
+| New, casual and regular viewers; Shorts feed (Shown in feed, Stayed to watch); Analytics for Artists | Channel Audit | `references/viewer-groups.md` — Studio only, no API |
 
 ## `studio_reach.py`
 
