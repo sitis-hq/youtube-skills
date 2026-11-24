@@ -7,8 +7,9 @@ Follow [the rules of the set](README.md); this brief adds what is specific to An
 `country` — the zone every scheduled recipe of the set except Daily data uses, so Recon's Monday
 05:00 is in the same zone. Recon runs Monday 05:00 and can take well over an hour, so Analytics runs a day later
 and reads the newest Recon run, whichever day it finished · **Reads from:** YouTube Onboarding,
-YouTube Daily data, YouTube Recon, YouTube Planning (when it exists), and every content-creation
-recipe that writes `publish` records (for example "Create Music Release").
+YouTube Daily data, YouTube Recon, YouTube Planning (when it exists), YouTube Community and
+YouTube Channel Audit (when they exist), and every content-creation recipe that writes `publish`
+records (for example "Create Music Release").
 
 ## What it is for
 
@@ -29,6 +30,9 @@ changes, so no two recipes revert each other's settings.
    published idea is judged against its score, and each planned slot against what was published.
 4. **Decide.** A weekly report ending in **one** main fix, and settings recommendations that the
    data supports.
+5. **Account.** The report opens with what the set did on the channel that week — published videos,
+   changes to videos and settings, replies and posts, new ideas, decisions waiting for the owner —
+   so one message says both what was done and what came of it.
 
 What it leaves behind:
 
@@ -36,7 +40,8 @@ What it leaves behind:
   and conclusions are step artifacts.
 - **Artifacts:** `inputs.json`, `channel-weekly.json`, `audience.json`, `revenue-ypp.md`,
   `recent-videos.json`, `funnel.json` + `funnel.md`, `retention-<videoId>.csv`, `<videoId>.srt`,
-  `retention-diagnosis-<videoId>.md`, `outliers.json`, **`report-<YYYY-MM-DD>.md`** (the weekly
+  `retention-diagnosis-<videoId>.md`, `outliers.json`, `claims-<recipe>.json`, `actions.json` +
+  `actions.md`, **`report-<YYYY-MM-DD>.md`** (the weekly
   report), `settings-reco.md` and `settings-desired.json`. Planning and the owner find them with
   `list-step-artifacts`.
 
@@ -57,6 +62,7 @@ What it leaves behind:
 13. WHEN settings are recommended THEN system MUST name for each the data behind it, the current and the proposed value, and whether the API or Studio applies it, and MUST recommend nothing the week's data does not support.
 14. WHEN settings recommendations are written THEN system MUST leave them as artifacts (`settings-reco.md`, `settings-desired.json`) for "YouTube Planning", and MUST NOT change anything on the channel, take any irreversible action or claim any intent.
 15. WHEN `plan` records exist THEN system MUST compare each planned slot of the recent window with what was published; IF Planning has not run THEN system MUST skip the comparison and say so.
+16. WHEN the report is written THEN system MUST open it with what the set did on the channel in the 7 days before the run — published videos, changes to videos and to the channel, community actions, new ideas, decisions waiting for the owner — taken only from committed intents (`intent.py digest`) and `publish` records of the declared producers, each with its recipe and its video or comment, and MUST list actions that are claimed but not confirmed, and failed ones, apart.
 
 ## Steps
 
@@ -76,9 +82,10 @@ attached to the recipe, as rule 2 says.
 | 9 | Outliers, titles and ideas judged | AI | `youtube-metrics`, `youtube-strategy` | — | `outliers.json` |
 | 10 | Weekly report | AI | `youtube-strategy` | — | `report-<YYYY-MM-DD>.md` |
 | 11 | Settings recommendations | AI | `youtube-channel-setup`, `youtube-data` | `YOUTUBE_REFRESH_TOKEN` | `settings-reco.md`, `settings-desired.json` |
+| 12 | What was done this week | AI (script) | `youtube-studio` | — | `claims-<recipe>.json`, `actions.json`, `actions.md` |
 
 Order: 1 first; 2, 3, 4 and 5 can run in parallel after it; 6 and 7 after 5; 8 after 7; 9 after
-5 and 6; 10 after 2–9; 11 after 2, 3 and 10.
+5 and 6; 12 after 1 and 5; 10 after 2–9 and 12; 11 after 2, 3 and 10.
 
 ## Design notes per step
 
@@ -280,6 +287,7 @@ day of the run.
 
 1. The "Data" line names each source with its date; the "Missing" line copies `inputs.json`'s
    `missing` and says what each absence limits.
+   The "What was done" section is `actions.md` of step 12, as it is.
    The "Ideas judged" section carries the idea outcomes and the planned vs published table of step 9.
 2. Every number comes from an artifact of this run. External figures only from
    `youtube-strategy/references/thresholds.md`, labelled YouTube, ours or secondary; never as a
@@ -301,7 +309,9 @@ Validator rubric:
   with search CTR; any external number is labelled with its kind from `thresholds.md`;
 - CTR appears as a percentage written from a fraction (0.045 → 4.5 %), never a value above 100 %;
 - traffic shares add up to about 100 %, and a source above 60 % of 28-day views is flagged;
-- missing data is stated with its consequence for the conclusions.
+- missing data is stated with its consequence for the conclusions;
+- "What was done" opens the report, comes from step 12's `actions.md`, and counts nothing as done
+  that is only claimed.
 
 **11 — Settings recommendations.**
 1. Follow `youtube-channel-setup/references/settings.md` → "Recommending changes from analytics".
@@ -327,6 +337,35 @@ Validator rubric:
 - current and proposed values are both given, and the current one matches the channel as read;
 - none rests on "may boost reach" without data;
 - `settings-desired.json` holds only API-applicable fields that `settings-reco.md` recommends.
+
+**12 — What was done this week.**
+
+Every action the set takes on the channel goes through `intent.py`, and a verified one is committed
+as the record `claim:<key>` in the memory of the recipe that took it (README rule 7). So the week's
+actions are read from those records, not from anyone's summary. The period is the 7 days before the
+run day; actions do not lag as the Analytics API does.
+
+1. For each declared producer that acts on the channel — "YouTube Planning", "YouTube Community",
+   "YouTube Onboarding" (its re-runs after an audit) and each creation recipe — read its intents with
+   `query-template-records --spec-template-id <producer> --project-id <this project> --key-prefix
+   claim: --limit 500` and save the answer as it comes, as `claims-<recipe>.json`. An undeclared
+   producer is absent and said so; it is never looked up by name.
+2. Run `youtube-studio: scripts/intent.py digest --records "<recipe name>=claims-<recipe>.json" …
+   --since <run − 7 days> --until <run − 1 day>`. It keeps the channel actions, groups them (videos,
+   channel, community), and lists apart the `uncertain` ones (claimed, never confirmed) and the
+   `failed` ones; a recipe's own keys that are not channel actions (its notifications, a DistroKid
+   release) are only counted.
+3. Published: the `publish` records whose `published_at` falls in the period, and the uploads of the
+   period in `recent-videos.json` (step 5) that have no `publish` record, marked "no record".
+4. New ideas: Recon's `idea` records with status `new` whose record changed in the period
+   (`updatedAt`); their count and the three with the highest `score`.
+5. Waiting for the owner: the newest `audit-decision.json` of "YouTube Channel Audit" (step "Owner
+   review") without an `owner_answer`; this recipe's own `settings-reco.md` not yet applied by
+   Planning (no committed `settings:` intent of Planning since it was written); a `ctr-scale-check.md`
+   of Daily data with no conclusion.
+6. Write `actions.json` (all of the above, as data) and `actions.md` in the "What was done" form of
+   `youtube-strategy/references/analytics-report.md`: each action with its recipe and its video
+   (`https://youtu.be/<id>`) or comment. An uncertain action is written as such, never as done.
 
 ## What changed from the source brief
 

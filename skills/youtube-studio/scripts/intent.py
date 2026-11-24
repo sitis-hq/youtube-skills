@@ -14,6 +14,13 @@ Commands (JSON on stdout; a refusal exits 2 with {"ok": false, "error": ...}):
   intent.py commit --key K [--result-file F | --result JSON]
                                           the action happened and was verified
   intent.py fail   --key K --reason TEXT  the action certainly did NOT happen; a later run may retry
+  intent.py digest --records NAME=FILE ... --since D --until D
+                                          what the recipes did on the channel in a period: each FILE is
+                                          a query-template-records answer for the prefix claim: of the
+                                          recipe NAME; committed claims become actions, open ones
+                                          "uncertain", failed ones "failed"; keys that are not channel
+                                          actions of this helper (a recipe's own notifications, a
+                                          DistroKid release) are counted, not listed
 
 claim/commit/fail need the run's ids: --spec-template-id and --project-id, or the "Process id" and
 "Project id" lines of current-task.md in the working directory.
@@ -301,6 +308,77 @@ def fail(key: str, ids: dict[str, str], reason: str) -> dict[str, Any]:
     return {"ok": True, "key": key, "outcome": "failed"}
 
 
+# ── digest: what was done in a period ───────────────────────────────────────────────────────────
+
+VERB_OF_PATTERN = [(re.compile(f"^{v['pattern']}$"), name) for name, v in VERBS.items()]
+GROUP = {"reply": "community", "pin": "community", "heart": "community", "hide": "community",
+         "report": "community", "post": "community", "ab": "videos", "thumbnail": "videos",
+         "metadata": "videos", "upload": "videos", "watermark": "channel", "branding": "channel",
+         "settings": "channel", "playlist": "channel"}
+
+
+def verb_of(key: str) -> str | None:
+    return next((name for pat, name in VERB_OF_PATTERN if pat.match(key)), None)
+
+
+def _records_of(doc: Any) -> list[dict[str, Any]]:
+    """A query-template-records answer as it comes ({"data": {"records": [...]}}), or its inner parts."""
+    for _ in range(3):
+        if isinstance(doc, list):
+            return [r for r in doc if isinstance(r, dict)]
+        if isinstance(doc, dict):
+            doc = doc.get("records", doc.get("data"))
+    raise Refusal("a --records file holds no records list")
+
+
+def digest(sources: list[tuple[str, str]], since: str, until: str) -> dict[str, Any]:
+    start, end = _date(since), _date(until)
+    if start > end:
+        raise Refusal("--since is after --until")
+    actions, uncertain, failed, other = [], [], [], {}
+    for recipe, path in sources:
+        try:
+            with open(path, encoding="utf-8") as fh:
+                records = _records_of(json.load(fh))
+        except OSError as e:
+            raise Refusal(f"cannot read {path}: {e.strerror}") from None
+        except json.JSONDecodeError as e:
+            raise Refusal(f"{path} is not JSON: {e}") from None
+        for r in records:
+            key = str(r.get("key", ""))
+            if not key.startswith("claim:"):
+                continue
+            at = str(r.get("updatedAt") or r.get("updated_at") or "")
+            if not (start <= at[:10] <= end):
+                continue
+            intent_key = key[len("claim:"):]
+            verb = verb_of(intent_key)
+            if verb is None:
+                other[recipe] = other.get(recipe, 0) + 1
+                continue
+            data = r.get("data") if isinstance(r.get("data"), dict) else {}
+            row = {"recipe": recipe, "group": GROUP[verb], "verb": verb, "what": VERBS[verb]["doc"],
+                   "key": intent_key, "at": at, "result": data.get("result")}
+            parts = intent_key.split(":")
+            if parts[1] in ("video", "comment"):
+                row[parts[1] + "_id"] = parts[2]
+            status = data.get("status")
+            if status == "committed":
+                actions.append(row)
+            elif status == "failed":
+                failed.append({**row, "reason": data.get("reason")})
+            else:
+                uncertain.append(row)
+    actions.sort(key=lambda a: a["at"])
+    counts: dict[str, int] = {}
+    for a in actions:
+        counts[a["group"]] = counts.get(a["group"], 0) + 1
+    return {"ok": True, "period": [start, end], "actions": actions, "counts": counts,
+            "uncertain": uncertain, "failed": failed, "not_channel_actions": other,
+            "note": "uncertain = claimed, never committed or failed: check on YouTube before saying "
+                    "it happened; a period is matched on the record's last change"}
+
+
 # ── command line ───────────────────────────────────────────────────────────────────────────────
 
 
@@ -330,6 +408,11 @@ def parser() -> argparse.ArgumentParser:
             cp.add_argument("--result-file", help="the same, from a file (preferred)")
         if name == "fail":
             cp.add_argument("--reason", required=True, help="why it did not happen")
+    dp = sub.add_parser("digest", help="what the recipes did on the channel in a period")
+    dp.add_argument("--records", action="append", required=True, metavar="NAME=FILE",
+                    help="a recipe's name and its query-template-records answer for the prefix claim:")
+    dp.add_argument("--since", required=True, help="first day, YYYY-MM-DD")
+    dp.add_argument("--until", required=True, help="last day, YYYY-MM-DD")
     return p
 
 
@@ -339,6 +422,14 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "key":
             parts = {k: v for k, v in vars(args).items() if k not in ("command", "verb")}
             out: dict[str, Any] = {"ok": True, "key": build_key(args.verb, **parts)}
+        elif args.command == "digest":
+            sources = []
+            for item in args.records:
+                name, sep, path = item.partition("=")
+                if not sep or not name.strip() or not path.strip():
+                    raise Refusal(f"--records takes NAME=FILE, got {item!r}")
+                sources.append((name.strip(), path.strip()))
+            out = digest(sources, args.since, args.until)
         else:
             ids = run_ids(args.spec_template_id, args.project_id)
             if args.command == "claim":

@@ -14,7 +14,7 @@ relies on come from one commit and cannot drift apart.
 | 1 | [Onboarding](01-onboarding.md) | once per channel, by hand; steps 1–7 again when an audit shifts the niche | Channel Audit |
 | 2 | [Daily data](02-daily-data.md) | daily | Onboarding, Recon |
 | 3 | [Recon, trends and ideas](03-recon.md) | weekly, Monday | Onboarding, Daily data, Community, Planning, creation recipes |
-| 4 | [Analytics](04-analytics.md) | weekly, Tuesday (a day after Recon) | Onboarding, Daily data, Recon, Planning, creation recipes |
+| 4 | [Analytics](04-analytics.md) | weekly, Tuesday (a day after Recon) | Onboarding, Daily data, Recon, Planning, Community, Channel Audit, creation recipes |
 | 5 | [Planning and optimization](05-planning.md) | monthly | Onboarding, Daily data, Recon, Analytics, Channel Audit, creation recipes |
 | 6 | [Community](06-community.md) | weekdays | Onboarding |
 | 7 | [Channel Audit](07-channel-audit.md) | quarterly; the first run by hand after Onboarding of an existing channel | Onboarding, Daily data, Planning, creation recipes |
@@ -196,6 +196,6 @@ A row cites `<brief>: <steps>`. "Inside" means another script runs it, and no st
 | `youtube-metrics` | `ypp.py` | 1: 18; 4: 4 |
 | `youtube-records` | `records.py` | 1: 6, 7; 2: 1, 2, 3; 3: 1, 4, 10, 11; 4: 1; 5: 1, 2, 4; 6: 1, 6, 7; 7: 1 |
 | `youtube-strategy` | `score_idea.py` | 3: 11; 5: 3 |
-| `youtube-studio` | `intent.py` | 1: 16, 17; 5: 9; 6: 6, 7 |
+| `youtube-studio` | `intent.py` | 1: 16, 17; 4: 12; 5: 9; 6: 6, 7 |
 | `youtube-studio` | `studio_reach.py` | 2: 3 |
 | `youtube-thumbnail-check` | `analyze_thumbnail.py` | 3: 8; 5: 6 |

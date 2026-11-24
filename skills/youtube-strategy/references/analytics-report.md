@@ -52,6 +52,14 @@ first; the action list is one main fix and at most two follow-ups instead of up 
 ## Week [start]–[end]
 Data: [sources] · Missing: [what is absent and what it limits]
 
+### What was done ([first day]–[last day])
+Published: | Video | Format | Recipe | Published |
+On the channel: | What | Video or comment | Recipe | When |   (from committed intents)
+Community: [n] replies, [n] posts, [n] pins/hearts, [n] hidden or reported
+New ideas: [n] — top 3 by score: …
+Waiting for you: [decisions with no answer yet: approvals, the audit's decision, settings]
+Not certain: [claimed, never confirmed — check on YouTube] · Failed: [what did not happen, why]
+
 ### Funnel
 | Stage | Value | Channel median | Read |
 Main leak: [stage] — [evidence]
@@ -78,6 +86,8 @@ Not yet: … (why)
 
 ## Quality bar
 
+- "What was done" lists only what the recipes' own records show: committed intents and `publish`
+  records; an action that is not certain is said to be so, never counted as done.
 - Every diagnosis cites the number it rests on; nothing generic.
 - Exactly one main fix; no padding to fill a list.
 - Traffic shares add up to about 100 %.
@@ -87,4 +97,5 @@ Not yet: … (why)
 ## Records
 
 Reads `studio`, `velocity` (Daily data), `publish` (creation recipes), `plan` (Planning), `idea`
-(Recon), `profile` (Onboarding). Writes none: the report is the step's artifact.
+(Recon), `profile` (Onboarding), and the `claim:` records of every recipe that acts on the channel
+(through youtube-studio `intent.py digest`). Writes none: the report is the step's artifact.

@@ -226,5 +226,57 @@ class Bracket(unittest.TestCase):
         self.assertIn("db down", out["error"])
 
 
+class Digest(unittest.TestCase):
+    def file(self, records):
+        d = tempfile.mkdtemp()
+        path = Path(d) / "claims.json"
+        path.write_text(json.dumps({"success": True, "command": "query-template-records",
+                                    "data": {"records": records}}))
+        return str(path)
+
+    def test_a_week_of_actions_by_group(self):
+        vid = "abcdefghijk"
+        cmt = "Ugxabcdefghij"
+        planning = self.file([
+            {"key": f"claim:metadata:video:{vid}:{'a' * 12}", "updatedAt": "2026-11-20T10:00:00Z",
+             "data": {"status": "committed", "result": {"diff": []}}},
+            {"key": f"claim:thumbnail:video:{vid}:{'b' * 12}", "updatedAt": "2026-11-10T10:00:00Z",
+             "data": {"status": "committed"}},
+        ])
+        community = self.file([
+            {"key": f"claim:reply:comment:{cmt}", "updatedAt": "2026-11-21T08:00:00Z",
+             "data": {"status": "committed"}},
+            {"key": "claim:post:community:2026-11-22:new-single", "updatedAt": "2026-11-22T08:00:00Z",
+             "data": {"status": "claimed"}},
+            {"key": f"claim:hide:comment:{cmt}", "updatedAt": "2026-11-22T09:00:00Z",
+             "data": {"status": "failed", "reason": "403"}},
+        ])
+        cmr = self.file([
+            {"key": "claim:notify:audio-approval:x", "updatedAt": "2026-11-20T10:00:00Z",
+             "data": {"status": "committed"}},
+        ])
+        out = intent.digest([("YouTube Planning", planning), ("YouTube Community", community),
+                             ("Create Music Release", cmr)], "2026-11-17", "2026-11-23")
+        self.assertEqual([(a["recipe"], a["verb"]) for a in out["actions"]],
+                         [("YouTube Planning", "metadata"), ("YouTube Community", "reply")])
+        self.assertEqual(out["actions"][0]["video_id"], vid)
+        self.assertEqual(out["counts"], {"videos": 1, "community": 1})
+        self.assertEqual([u["verb"] for u in out["uncertain"]], ["post"])
+        self.assertEqual(out["failed"][0]["reason"], "403")
+        self.assertEqual(out["not_channel_actions"], {"Create Music Release": 1})
+
+    def test_the_command_line_takes_name_equals_file(self):
+        path = self.file([])
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            code = intent.main(["digest", "--records", f"YouTube Planning={path}",
+                                "--since", "2026-11-17", "--until", "2026-11-23"])
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(buf.getvalue())["actions"], [])
+        with redirect_stdout(io.StringIO()):
+            self.assertEqual(intent.main(["digest", "--records", path, "--since", "2026-11-17",
+                                          "--until", "2026-11-23"]), 2)
+
+
 if __name__ == "__main__":
     unittest.main()
