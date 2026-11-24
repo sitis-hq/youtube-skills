@@ -215,5 +215,16 @@ class ForeignKeys(unittest.TestCase):
         self.assertNotIn("foreign", json.loads(buf.getvalue()))
 
 
+class SeedNiche(unittest.TestCase):
+    def test_a_seed_carries_its_niche(self):
+        _, data = records.build("seed", dict(term="rnb", source="dataforseo", as_of="2026-11-24", niche="alternative rnb"))
+        self.assertEqual(data["niche"], "alternative rnb")
+        records.validate_stored("seed:rnb", data)
+
+    def test_a_seed_without_niche_still_reads(self):
+        _, data = records.build("seed", dict(term="rnb", source="dataforseo", as_of="2026-11-24"))
+        self.assertNotIn("niche", data)
+
+
 if __name__ == "__main__":
     unittest.main()

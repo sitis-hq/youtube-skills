@@ -1,5 +1,9 @@
 # YouTube skills
 
+**What every recipe of the set must keep — memory, intents, tools, reads, credentials — is
+[`CONTRACT.md`](CONTRACT.md).** The recipes themselves live and evolve on the platform; the briefs
+they were first built from are at the tag `briefs-v1`.
+
 Skills, deterministic scripts and the shared memory contract for the recipes that run a YouTube
 channel on Sitis: onboarding, daily data, recon and ideas, analytics, planning and optimization,
 community. One repository so that a rule lives in one place: a recipe attaches the skills it needs,

@@ -62,6 +62,9 @@ calls `ai-integration upsert-template-record` only for a valid record. Output is
   export ran and gave nothing, which a missing record cannot.
 - **Links, handles and other channel settings are config credentials of the project, not records.**
   A recipe that needs them declares them, and a run without them pauses and asks the owner.
+- **Seeds belong to a niche.** Write every `seed` with `--niche <profile:channel's niche>`. Read
+  the seeds whose `niche` equals the profile's niche now; when none carries a `niche` (seeds from
+  before the field), all count (`CONTRACT.md`, rule 12).
 - A record carries `"v": 1`. A reader that meets another version stops and reports it rather than
   guessing.
 - **A foreign key is skipped, not a stop.** A prefix query can return another recipe's own state that

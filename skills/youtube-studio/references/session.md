@@ -6,7 +6,7 @@ and when it cannot, it asks for a sign-in instead of guessing.
 
 ## What the recipe declares
 
-- A browser session record on the step that drives Studio. The recipe briefs of this set name it
+- A browser session record on the step that drives Studio. The recipes of this set name it
   **`YT_STUDIO_SESSION`**. The platform does not fix the name: any key ending in `_SESSION` is a
   session record, and the browser that carries it is the MCP server `playwright-` + the key without
   `_SESSION`, lower-cased with dashes — for `YT_STUDIO_SESSION` the tools are

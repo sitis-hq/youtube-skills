@@ -1,33 +1,31 @@
-# Recipe briefs for the YouTube channel set
+# The contract of the YouTube channel set
 
-Each file here is a brief for the AI Spec Template Editor: what one recipe does, its steps, and for
-every step the skills, credentials and records it uses. The owner attaches the brief to the editor
-chat. The editor builds the recipe from it with its own commands (`add-spec-task-template`,
-`attach-from-shelf`, `declare-cred-key`, `declare-read`, `update-spec-template`,
-`apply-template-revision`, `publish-spec-template`, `add-spec-template-schedule`).
+What every recipe of the set must keep, whoever changes it — the owner, the recipe editor or
+"Improve Spec Templates". The recipes evolve on their own after real runs, and that is intended; this
+page is what they must not lose while they do, because the recipes depend on each other through it.
 
-The briefs live in the same repository as the skills they name, so a brief and the skills it
-relies on come from one commit and cannot drift apart.
+The recipes were first built from briefs, kept at the git tag `briefs-v1`. Since then the live
+recipes and their revision history are the source of truth for what each recipe does; this file is
+the source of truth for how they fit together. A change that would break a rule here is a change of
+the contract: change this file first, then every recipe it touches.
 
-| # | Brief | Runs | Reads from |
-| --- | --- | --- | --- |
-| 1 | [Onboarding](01-onboarding.md) | once per channel, by hand; steps 1–7 again when an audit shifts the niche | Channel Audit |
-| 2 | [Daily data](02-daily-data.md) | daily | Onboarding, Recon |
-| 3 | [Recon, trends and ideas](03-recon.md) | weekly, Monday | Onboarding, Daily data, Community, Planning, creation recipes |
-| 4 | [Analytics](04-analytics.md) | weekly, Tuesday (a day after Recon) | Onboarding, Daily data, Recon, Planning, Community, Channel Audit, creation recipes |
-| 5 | [Planning and optimization](05-planning.md) | monthly | Onboarding, Daily data, Recon, Analytics, Channel Audit, creation recipes |
-| 6 | [Community](06-community.md) | weekdays | Onboarding |
-| 7 | [Channel Audit](07-channel-audit.md) | quarterly; the first run by hand after Onboarding of an existing channel | Onboarding, Daily data, Planning, creation recipes |
+## The set
 
-The exact recipe names, which the briefs use to find each other: "YouTube Onboarding", "YouTube Daily
-data", "YouTube Recon", "YouTube Analytics", "YouTube Planning", "YouTube Community", "YouTube Channel
-Audit". A creation
-recipe (such as "Create Music Release") publishes videos and writes `publish` records.
+| Recipe | Runs | Reads from |
+| --- | --- | --- |
+| "YouTube Onboarding" | once per channel, by hand; steps 1–7 again when an audit shifts the niche (steps 8–18 close without acting) | Channel Audit, Planning |
+| "YouTube Daily Data" | daily | Onboarding, Recon |
+| "YouTube Recon" | weekly, Monday | Onboarding, Daily Data, Community, Planning, creation recipes |
+| "YouTube Analytics" | weekly, Tuesday | Onboarding, Daily Data, Recon, Planning, Community, Channel Audit, creation recipes |
+| "YouTube Planning" | monthly, the 1st | Onboarding, Daily Data, Recon, Analytics, Channel Audit, creation recipes |
+| "YouTube Community" | weekdays | Onboarding |
+| "YouTube Channel Audit" | quarterly, the 25th of the quarter's last month; first run by hand | Onboarding, Daily Data, Planning, creation recipes |
+
+A creation recipe ("Create Music Release" is the one in use) publishes videos and writes `publish`
+records. Recipes find each other by these exact names (`find-spec-template` ignores case). Every
+schedule is cron in UTC; a recipe's local hour is the channel's country's.
 
 ## Rules every recipe of the set follows
-
-The editor applies these to every recipe. A brief repeats one of them only where the step needs
-something more specific.
 
 ### 1. Everything in English
 
@@ -82,13 +80,10 @@ optional in the agent's eyes, and it will improvise instead (the first Onboardin
 without the competition script that sat in the attached skill, and wrote its own DataForSEO client).
 So:
 
-- a brief names, step by step, each script the step runs, as `<skill>: scripts/<script>.py`;
-- a skill attached to a step is there because the step's text names one of its scripts or
-  references; a skill attached with nothing named is a gap in the brief;
-- the table [Scripts and the steps that run them](#scripts-and-the-steps-that-run-them) below lists
-  every script of the set with the briefs and steps that run it. `python3 run_tests.py` checks it
-  against the scripts in `skills/` and against the briefs: a new script needs a row, and a brief that
-  names a script must be cited in its row.
+- a step names each script it runs, as `<skill>: scripts/<script>.py` — in its subtasks or in its
+  section of the recipe's design, which every run receives whole;
+- a skill attached to a step is there because the step names one of its scripts or references; a
+  skill attached with nothing named is a gap.
 
 ### 4. Memory goes only through `youtube-records`
 
@@ -110,11 +105,9 @@ A recipe reads another recipe's memory or files only after declaring it.
 The run context then gives the producer's id, and deleting the producer warns that this recipe
 breaks.
 
-A recipe never reads another it has not declared, not even by finding it by name. When a producer
-does not exist yet as the reader is built (the briefs are built in order 2 → 7), the reader is built
-without that read and treats the producer as absent, saying so in its run. The producer's brief then
-tells the editor to add the `declare-read` to each earlier reader it names, so the set is complete
-once the last brief is built.
+A recipe never reads another it has not declared, not even by finding it by name. A producer that
+is not declared, or has nothing yet, is absent: the reader says so in its run and goes on. A recipe
+added to the set later declares itself in each existing recipe that reads it.
 
 ### 6. Credentials
 
@@ -161,41 +154,47 @@ Apply them only after the owner approves.
 
 ### 10. Validators
 
-Turn on the step validator wherever the brief gives a rubric. The rubric says what must be true of
+Turn on the step validator wherever the step's result must meet a rubric (a decision, a ranking, a
+public text). The rubric says what must be true of
 the step's artifacts, not how the step was done.
 
-## Scripts and the steps that run them
+### 11. Who writes what
 
-A row cites `<brief>: <steps>`. "Inside" means another script runs it, and no step calls it directly.
+Each record kind has one writer (`skills/youtube-records/SKILL.md`). A step artifact that another
+recipe reads is found by its recipe and step name (`list-step-artifacts --step-name`): renaming a
+step that others read breaks them, so a rename is a change of the contract. The artifacts other
+recipes read today:
 
-| Skill | Script | Run by |
+| Artifact | Written by (recipe → step) | Read by |
 | --- | --- | --- |
-| `youtube-channel-setup` | `apply_channel.py` | 1: 16, 17; 5: 7, 8 |
-| `youtube-channel-setup` | `avatar_preview.py` | 1: 12 |
-| `youtube-channel-setup` | `banner_preview.py` | 1: 12 |
-| `youtube-community` | `comments.py` | 6: 1, 6 |
-| `youtube-data` | `analytics.py` | 1: 18; 4: 2, 3, 4, 6, 7; 5: 5; 7: 2, 3, 4, 5 |
-| `youtube-data` | `channel_baselines.py` | 1: 1; 3: 9; 7: 2, 6 |
-| `youtube-data` | `data_api.py` | 1: 11, 18; 2: 1; 3: 2, 4, 5, 10; 4: 4, 5, 11; 5: 1, 5; 7: 2 |
-| `youtube-data` | `reporting.py` | 1: 11; 2: 3; 4: 6; 5: 5; 7: 3 |
-| `youtube-data` | `thumbnails.py` | 3: 8; 5: 6, 8 |
-| `youtube-data` | `transcript.py` | 3: 7; 4: 7; 5: 6 |
-| `youtube-demand` | `dfs.py` | 1: 1, 3, 6; 3: 2, 3, 10; 5: 6; 7: 6 |
-| `youtube-demand` | `niches.py` | 1: 1; 3: 9; 7: 6 |
-| `youtube-demand` | `normalize.py` | 1: 6; 3: 3, 10; 5: 6 |
-| `youtube-demand` | `yt_competition.py` | inside `niches.py` and `normalize.py` |
-| `youtube-metadata` | `apply_video.py` | 5: 6, 7, 8 |
-| `youtube-metadata` | `check_metadata.py` | 1: 13; 5: 4, 6 |
-| `youtube-metrics` | `candidates.py` | 3: 4 |
-| `youtube-metrics` | `chapters.py` | 5: 6 |
-| `youtube-metrics` | `deadair.py` | 4: 8 |
-| `youtube-metrics` | `retention.py` | 4: 8; 5: 5; 7: 4 |
-| `youtube-metrics` | `swipe.py` | 1: 1; 3: 6, 7; 4: 9; 5: 5; 7: 2 |
-| `youtube-metrics` | `title.py` | 3: 11; 4: 9; 5: 4, 6 |
-| `youtube-metrics` | `velocity.py` | 2: 2 |
-| `youtube-metrics` | `ypp.py` | 1: 18; 4: 4 |
-| `youtube-records` | `records.py` | 1: 6, 7; 2: 1, 2, 3; 3: 1, 4, 10, 11; 4: 1; 5: 1, 2, 4; 6: 1, 6, 7; 7: 1 |
-| `youtube-strategy` | `score_idea.py` | 3: 11; 5: 3 |
-| `youtube-studio` | `intent.py` | 1: 16, 17; 4: 12; 5: 9; 6: 6, 7 |
-| `youtube-studio` | `studio_reach.py` | 2: 3 |
-| `youtube-thumbnail-check` | `analyze_thumbnail.py` | 3: 8; 5: 6 |
+| `niche-decision.md`, `niche-candidates.json`, `channel-history.json` | Onboarding → "Niche selection", "Niche discovery" | Channel Audit |
+| `audience-profile.md`, `format-plan.md`, `brand-profile.md`, `upload-defaults.md` | Onboarding → "Audience, language and region", "Formats and content pillars", "Brand profile", "Channel settings (desired state)" | Analytics, Planning, Community, creation recipes |
+| `seed-keywords.json` (with `anchor`) | Onboarding → "Seed keywords" | Recon |
+| `ctr-scale-check.md` | Daily Data → "Impressions and CTR" | Analytics, Planning, Channel Audit |
+| `keywords.json`, `ideas.md`, `trend-radar.md` | Recon → "Keyword research and new seeds", "Idea backlog and idea status", "Trend radar" | Planning, creation recipes |
+| `community-ideas.md` | Community → "Mine ideas from questions" | Recon |
+| `report-<date>.md`, `settings-reco.md`, `settings-desired.json` | Analytics → "Weekly report", "Settings recommendations" | Planning |
+| `audit-<quarter>.md`, `audit-decision.json` | Channel Audit → "Diagnosis and decision", "Owner review" | Planning, Onboarding, Analytics |
+
+### 12. Keywords belong to a niche
+
+A `seed` record carries `niche`: `profile:channel`'s niche when it was written. A reader uses the
+seeds whose `niche` equals the profile's niche now; when none carries a `niche` (seeds written
+before the field), all count. So a change of niche never deletes the old keywords — they stay as
+history and come back if the channel returns to that niche — and never mixes them into the new one.
+
+### 13. One audit decision counts at a time
+
+`audit-decision.json` carries `audit_id` (the audit run's date) and, when it replaces a decision of
+an earlier audit that was never answered, `supersedes` (that audit's id). A reader acts on a
+decision only when its `audit_id` is the newest audit's and its `owner_answer.answer` is `accepted`
+or `changed`. A newer audit makes every older decision history, answered or not.
+
+### 14. Changing a recipe
+
+- Each change is a revision (`apply-template-revision`); a revision can be rolled back.
+- A step that acts on the channel keeps its intent (rule 7); a step that reads another recipe keeps
+  its `declare-read` (rule 5); a step's credential keys stay declared on that step (rule 6).
+- A reader skips what `records.py validate` calls foreign (exit 3) and stops only on another
+  version of a contract record.
+- A check of the whole set is a check against this file: each rule, for each recipe.
