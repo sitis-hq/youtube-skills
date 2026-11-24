@@ -151,6 +151,9 @@ New in this repository; written for channels whose videos are an artist's music.
   Audio)`); this type only adds: search-led Help titles name the mood/activity keyword from seeds.
 - **Thumbnail**: release artwork as the consistent anchor; for Help videos, the mood made visible.
 - **Hook**: the song's strongest moment early — the first seconds of a Short are the chorus or the
-  drop, not an intro.
+  drop, not an intro. Each Short of a release has its own entry point and visual (artists.youtube:
+  "Make Many Different Shorts for a Song"); the sound may repeat, the opening may not.
+- **Length**: a release Short is 60 s or less while a Content ID claim can apply — the distributor
+  claims the release, and a claimed Short over one minute is blocked worldwide (Help 15424877).
 - **Fails when**: generic keywords replace the artist's name; releases go out without Shorts;
   mood/activity videos are made where no seed shows demand.

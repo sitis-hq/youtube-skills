@@ -66,6 +66,16 @@ Added from the research on deleting and hiding videos (2026-11-24; quotes as it 
 | What hiding does | private and unlisted videos leave the channel's Videos tab, search, recommendations and the subscriptions feed; unlisted can still sit in a channel section and play by link | Help 157177 |
 | Re-uploading own Shorts | re-uploading or re-using Shorts to pull more views "could be seen by the system as spam/abusive behavior"; make a better version instead | YouTube Liaison on X, 2023-08-09 (pre-2024) |
 
+Added from the research on two Shorts of one release (2026-11-24; quotes as it gives them):
+
+| Fact | Number or statement | Source |
+| --- | --- | --- |
+| Many Shorts for a song | "Make Many Different Shorts for a Song. The more a fan hears your song in Shorts, the more likely they are to listen to your song in other formats"; "Channel size or number of uploads do not influence how your Shorts perform"; "Try posting weekly and then re-adjust your posting schedule based on your Shorts' performance" | artists.youtube "Shorts for Artists" |
+| One audio snippet before release | use the same audio snippet in all pre-release content, so the Shorts gather on one sound page: the sound may repeat, the video may not | artists.youtube "Pre-Release Strategy" |
+| Each Short is tested on its own | a Short is shown to a seed audience, then "may get a lot more traffic or it may kind of taper off"; no ideal length ("to what length do you need to tell your story?"); "most thumbnails are never seen because people are in the feed" | Todd Sherman, Creator Insider 2023-08-23 (pre-2024), via OutlierKit 2026-10-03 |
+| Shorts over one minute with Content ID | "Any Short that is over one minute in duration with an active Content ID claim of any type, including manual claims, will be blocked globally"; an artist's own distributor or label can create the claim. A reported relaxation from 2026-09-24 is not on the page as read 2026-11-24 | Help 15424877 "Understand three-minute YouTube Shorts" |
+| Repetitive content and monetisation | content that "may feel repetitive to viewers after watching several videos in a row from the same channel" is not monetised; each video's substance "should be materially varied"; reviewers look at the newest and most viewed videos and their metadata, thumbnails included | Help 1311392 "YouTube channel monetization policies" ("Generic or Repetitive Content") |
+
 ## Never recommended
 
 YouTube refutes these, so no report, audit or plan offers them as a growth lever. A step that is
@@ -142,6 +152,7 @@ is **not** on Help 13429240 as read 2026-11-04 — re-read the page before telli
 | "4–6 % CTR is average, 10 %+ excellent", CTR tables by channel size | no source; YouTube publishes only the 2–10 % half-of-channels band (research 2026-11-23) |
 | "70 % still watching at 30 s is strong, under 50 % needs a fix" | no source; compare the Intro with the channel's own typical |
 | "70–80 % Stayed to watch is normal for Shorts" | community consensus with no method (research 2026-11-24); compare with the channel's own Shorts |
+| "5–10 variations per song", "the feed never shows two Shorts of one creator in a row" | marketers' opinions without data; no YouTube statement on Shorts of one channel competing with each other (research 2026-11-24) |
 | Shorts-to-long-form conversion rates ("under 10 %", "12–18 subscribers per 10 k views") | no source; YouTube publishes none |
 | "Galloway's 500-channel study: Shorts + long-form grew 2.8× faster" | no primary trace |
 | "The algorithm punishes a break", "the first hour decides", "a 20/50/80 % gradual pivot" | refuted by YouTube or reported to fail (rows above) |

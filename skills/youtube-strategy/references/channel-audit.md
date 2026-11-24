@@ -92,6 +92,7 @@ table; the judging counts are `thresholds.md` rows.
 | 17 | Shorts: "Shown in feed" near zero | the Short did not enter the feed | check its format (a 16:9 video is long-form), the Restrictions column and Content ID claims | Shown in feed of the next Shorts |
 | 18 | Shorts: shown in the feed, "Stayed to watch" below the channel's Shorts median | the first frame and seconds do not hold | change the hook and the first frame; never re-upload the same file (`thresholds.md`) | Stayed to watch against the median, 5 Shorts |
 | 19 | after a change of topic, old off-topic videos still get impressions and bring viewers who do not watch the new videos ("Popular with different audiences", traffic to old videos) | the old catalogue pulls recommendations to the old topic | unlist those videos, one by one, never delete; not when the channel is near a YPP threshold (hidden videos stop counting) | the new videos' impressions and CTR, the 4 weeks before against the 4 after |
+| 20 | music: two Shorts of one release open the same way (same entry point, same visual) | one hook tested twice; the later one is swiped by viewers who saw the first | give each its own entry point and visual; alternate which one goes first; never delete either | pairs compared on Stayed to watch, average percentage viewed and subscribers, 4 pairs at least |
 
 ## 4. The action ladder
 
@@ -124,6 +125,15 @@ the niche → 5. shift to an adjacent niche → 6. reposition the same channel �
   trailer about two weeks before, Shorts with the official audio from the audio picker, the music
   video as their related video, a release playlist, fan Shorts featured after release. YouTube
   publishes no cadence number for releases.
+- Every Short of one release is a different Short: its own entry point into the track and its own
+  visual. The sound may repeat; the first seconds may not, since they are what the feed tests. Two
+  Shorts that open the same way test one hook twice (row 20).
+- A Short over one minute with any Content ID claim is blocked worldwide (Help 15424877), and the
+  artist's own distributor claims the release: a release Short is 60 s or less until the channel is
+  allowlisted with the distributor.
+- Pairs of Shorts with one opening and one thumbnail, release after release, look like the
+  repetitive content the monetisation policy excludes (Help 1311392): vary the substance, not the
+  length only.
 
 ## 6. The previous audit
 
