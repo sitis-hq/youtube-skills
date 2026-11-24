@@ -153,7 +153,14 @@ New in this repository; written for channels whose videos are an artist's music.
 - **Hook**: the song's strongest moment early — the first seconds of a Short are the chorus or the
   drop, not an intro. Each Short of a release has its own entry point and visual (artists.youtube:
   "Make Many Different Shorts for a Song"); the sound may repeat, the opening may not.
-- **Length**: a release Short is 60 s or less while a Content ID claim can apply — the distributor
-  claims the release, and a claimed Short over one minute is blocked worldwide (Help 15424877).
-- **Fails when**: generic keywords replace the artist's name; releases go out without Shorts;
-  mood/activity videos are made where no seed shows demand.
+- **Measure**: the artist at the song level across all channels, not the own uploads' views. On an
+  Official Artist Channel, Analytics for Artists separates "Official Artist Channel" (Art Tracks
+  included) from "Other Channels" (fan videos whose main component is the song) (Help 18736729;
+  youtube-studio `viewer-groups.md`): an artist whose songs grow there is not stalled. Music videos
+  are compared only with the channel's own music videos.
+- **Between releases**: YouTube's artist playbook — a trailer about two weeks before, Shorts with the
+  official audio, the music video as their related video, a release playlist, fan Shorts featured
+  after release (artists.youtube resources). YouTube publishes no release cadence number.
+- **Fails when**: generic keywords replace the artist's name; releases go out without Shorts; the
+  Shorts of one release open the same way; views come only in release weeks; mood/activity videos
+  are made where no seed shows demand.

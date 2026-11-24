@@ -51,13 +51,13 @@ swiped away).
 4. Write `shorts-feed.json`: per Short the numbers as shown, `restrictions`, and `not_shown` for
    what Studio did not show. Never estimate a missing number.
 
-## Analytics for Artists (music-artist channels)
+## Analytics for Artists (the `music-artist` type's measure)
 
 1. Studio → **Analytics**; on an Official Artist Channel the view has a toggle between "Official
    Artist Channel" and "Other Channels".
 2. For each toggle, read total views and unique viewers for the audit period, and the top songs with
    their views.
-3. Write `artist-reach.json`: both toggles, the songs, the period, `source: "studio"`.
+3. Write `type-measure.json`: both toggles, the songs, the period, `source: "studio"`.
 
 A channel without the toggle is not an Official Artist Channel: write that, and the audit judges the
 own uploads only, saying so.

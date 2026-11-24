@@ -87,12 +87,12 @@ table; the judging counts are `thresholds.md` rows.
 | 12 | strong search, weak browse, or the reverse | the surfaces want different packaging | package for the surface the video lives on (search: literal; browse: curiosity) | CTR and hold per traffic source |
 | 13 | a sharp drop after a viral spike | back to the pre-spike baseline — not a stall | re-baseline without the spike; give the spike's viewers a follow-up | the pre-spike median |
 | 14 | "shadow ban" suspected; recommendations still the main source | normal variance | run rows 1–6 | the traffic-source mix |
-| 15 | music: own uploads flat, the songs grow on Art Tracks and fan Shorts | not a stall: split measurement | judge on Analytics for Artists, both toggles | song-level viewers per release cycle |
-| 16 | music: views only in release weeks | release-only cadence | YouTube's artist playbook: trailer two weeks before, official-audio Shorts, related-video links, fan Shorts | Shorts reach and returning viewers between releases |
-| 17 | Shorts: "Shown in feed" near zero | the Short did not enter the feed | check its format (a 16:9 video is long-form), the Restrictions column and Content ID claims | Shown in feed of the next Shorts |
+| 15 | the own uploads look flat, but the channel's type measures reach elsewhere (its "Measure" line in `channel-types.md`) and that reach grows | not a stall: the measure was wrong | judge on the type's measure | the type's measure, the next audit |
+| 16 | views come only around the channel's own events (releases, launches, seasons) and fall to nothing between them | output tied to events only | the type's playbook for between the events (`channel-types.md`); keep the formats that need no event | views and returning viewers between events |
+| 17 | Shorts: "Shown in feed" near zero | the Short did not enter the feed | check its format (a 16:9 video is long-form) and the Restrictions column: a Short over one minute with a Content ID claim is blocked worldwide (Help 15424877) | Shown in feed of the next Shorts |
 | 18 | Shorts: shown in the feed, "Stayed to watch" below the channel's Shorts median | the first frame and seconds do not hold | change the hook and the first frame; never re-upload the same file (`thresholds.md`) | Stayed to watch against the median, 5 Shorts |
 | 19 | after a change of topic, old off-topic videos still get impressions and bring viewers who do not watch the new videos ("Popular with different audiences", traffic to old videos) | the old catalogue pulls recommendations to the old topic | unlist those videos, one by one, never delete; not when the channel is near a YPP threshold (hidden videos stop counting) | the new videos' impressions and CTR, the 4 weeks before against the 4 after |
-| 20 | music: two Shorts of one release open the same way (same entry point, same visual) | one hook tested twice; the later one is swiped by viewers who saw the first | give each its own entry point and visual; alternate which one goes first; never delete either | pairs compared on Stayed to watch, average percentage viewed and subscribers, 4 pairs at least |
+| 20 | two or more videos on one subject open the same way — same first seconds, same visual, often the same thumbnail (clips of one long video, versions of one release, one template reused) | one hook tested twice; the later one is swiped or skipped by viewers who saw the first; release after release it reads as the repetitive content the monetisation policy excludes (Help 1311392) | give each its own opening and visual, keep the subject; alternate which one goes first; never delete either | pairs compared on Stayed to watch (Shorts) or CTR and Intro (long), and subscribers, 4 pairs at least |
 
 ## 4. The action ladder
 
@@ -115,25 +115,19 @@ the niche → 5. shift to an adjacent niche → 6. reposition the same channel �
   candidates are measured anew and `profile:channel` carries the new niche. Rung 7, a new channel,
   is the owner's to start: a new project and its own Onboarding.
 
-## 5. Music artist channels
+## 5. The channel's type
 
-- Judge the artist at the song level across all channels, not by the own uploads' views: an Official
-  Artist Channel whose songs grow on Art Tracks and fan Shorts is not stalled (row 15).
-- Talk-channel duration and Intro norms do not apply to music videos; compare music only with the
-  channel's own music.
-- Release health is the pre-, release- and post-release playbook (artists.youtube resources): a
-  trailer about two weeks before, Shorts with the official audio from the audio picker, the music
-  video as their related video, a release playlist, fan Shorts featured after release. YouTube
-  publishes no cadence number for releases.
-- Every Short of one release is a different Short: its own entry point into the track and its own
-  visual. The sound may repeat; the first seconds may not, since they are what the feed tests. Two
-  Shorts that open the same way test one hook twice (row 20).
-- A Short over one minute with any Content ID claim is blocked worldwide (Help 15424877), and the
-  artist's own distributor claims the release: a release Short is 60 s or less until the channel is
-  allowlisted with the distributor.
-- Pairs of Shorts with one opening and one thumbnail, release after release, look like the
-  repetitive content the monetisation policy excludes (Help 1311392): vary the substance, not the
-  length only.
+The method above is the same for every channel. What differs by type lives in
+`channel-types.md`, under the type `profile:channel` names, and the audit reads that entry:
+
+- **Measure** — where the type's reach is counted, when it is not only the own uploads' views (rows
+  15–16). A type without the line is measured by the steps above alone.
+- **Fails when** — the type's known failures. Each one is checked as one more hypothesis, with the
+  same evidence rules as a row of the table, and named in the decision when it binds.
+- Comparisons stay inside the type's own formats: duration and Intro norms of one format are not
+  applied to another.
+
+A type's entry never changes the order of the constraints or the ladder.
 
 ## 6. The previous audit
 

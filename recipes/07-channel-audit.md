@@ -37,7 +37,7 @@ What it leaves behind:
 
 - **Records:** none. No record kind has the audit as its writer; its conclusions are artifacts.
 - **Artifacts:** `inputs.json`, `videos.json`, `baseline.json`, `click.json`, `hold.json`,
-  `retention-<videoId>.csv`, `viewer-groups.json`, `shorts-feed.json`, `artist-reach.json` (music-artist channels),
+  `retention-<videoId>.csv`, `viewer-groups.json`, `shorts-feed.json`, `type-measure.json` (when the channel's type has a "Measure" line),
   `return.json`, `market.json`, `previous-decision.md`, **`audit-YYYY-QN.md`** and
   **`audit-decision.json`**. Planning, Onboarding and the next audit find them with
   `list-step-artifacts`.
@@ -51,7 +51,7 @@ What it leaves behind:
 5. WHEN Shorts are judged THEN system MUST read their "Shown in feed" and "Stayed to watch" in Studio and compare them only with the channel's own Shorts, and MUST NOT read a Short that stalled after its first test views as suppression.
 6. WHEN hold is judged THEN system MUST measure the Intro (share still watching at 30 s) and the middle of each curve with `retention.py`, against the channel's typical for the same length band.
 7. WHEN return is judged THEN system MUST read new, casual and regular viewers in Studio, and subscribers gained and lost from the Analytics API, and MUST write "no data" for what Studio does not show.
-8. WHEN the channel's type is `music-artist` THEN system MUST judge it at the song level across the official channel and other channels (Analytics for Artists), and MUST NOT apply talk-channel duration or Intro norms to music videos.
+8. WHEN the channel's type has an entry in `channel-types.md` THEN system MUST read its measure where the entry names one, MUST check each of its "Fails when" lines as a hypothesis with the same evidence rules, and MUST compare a format the type names only with itself.
 9. WHEN the market is read THEN system MUST re-rank the channel's niche terms with `niches.py` and compare openness and demand with Onboarding's numbers.
 10. WHEN a previous audit exists THEN system MUST judge its decision on the metric and date it set before looking for a new constraint, and MUST NOT stack a new change on a decision that has not had its uploads yet.
 11. WHEN the decision is made THEN system MUST name exactly one row of the decision table and one rung of the action ladder, the videos it concerns, the metric to judge it and when, at most two follow-ups, a number with source and date for every claim, and the rows it could not test.
@@ -71,7 +71,7 @@ attached to the recipe, as rule 2 says.
 | 2 | Videos and baseline | AI (scripts) | `youtube-data`, `youtube-metrics`, `youtube-strategy`, `yt-dlp` | `YOUTUBE_REFRESH_TOKEN` | `videos.json`, `baseline.json` |
 | 3 | Click by traffic source | AI (scripts) | `youtube-data`, `youtube-strategy` | `YOUTUBE_REFRESH_TOKEN` | `click.json` |
 | 4 | Hold | AI (scripts) | `youtube-data`, `youtube-metrics`, `youtube-strategy` | `YOUTUBE_REFRESH_TOKEN` | `retention-<videoId>.csv`, `hold.json` |
-| 5 | Return, viewer groups and the Shorts feed | AI (script + browser) | `youtube-data`, `youtube-studio` | `YOUTUBE_REFRESH_TOKEN`, `YT_STUDIO_SESSION` | `viewer-groups.json`, `shorts-feed.json`, `artist-reach.json`, `return.json` |
+| 5 | Return, viewer groups and the Shorts feed | AI (script + browser) | `youtube-data`, `youtube-studio` | `YOUTUBE_REFRESH_TOKEN`, `YT_STUDIO_SESSION` | `viewer-groups.json`, `shorts-feed.json`, `type-measure.json`, `return.json` |
 | 6 | The niche's market now | AI (scripts) | `youtube-demand`, `youtube-data`, `yt-dlp`, `dataforseo-mcp-server` | `DATAFORSEO_LOGIN`, `DATAFORSEO_PASSWORD` | `market.json` |
 | 7 | The previous decision | AI | `youtube-strategy` | — | `previous-decision.md` |
 | 8 | Diagnosis and decision | AI | `youtube-strategy` | — | `audit-YYYY-QN.md`, `audit-decision.json` |
@@ -166,7 +166,8 @@ exists; a creation recipe added later declares itself here (README rule 5).
    is left out of the median.
 4. Shorts: measure their curves too, but judge them only with other Shorts; a Short of 30 s or less
    has no Intro (`intro_30s` is null).
-5. Music videos of a `music-artist` channel are compared only with the channel's own music videos.
+5. A format the channel's type names (`channel-types.md`) is compared only with itself, for example
+   music videos with music videos.
 6. Write `hold.json`.
 
 **5 — Return, viewer groups and the Shorts feed.**
@@ -178,10 +179,12 @@ exists; a creation recipe added later declares itself here (README rule 5).
    session check (rule 8): `viewer-groups.json`.
 3. The Shorts of the period, by the same reference ("The Shorts feed"): `shorts-feed.json`. Step 8
    judges a Short's click on it, never on thumbnail CTR.
-4. A `music-artist` channel: Analytics for Artists by the same reference, `artist-reach.json`. A
-   channel without the toggle is judged on its own uploads, and the file says so.
-5. Write `return.json`: gained, lost, net per month; the viewer groups and their change; for music,
-   song-level reach. What Studio did not show is "no data", never an estimate.
+4. When the channel's type has a "Measure" line in `youtube-strategy/references/channel-types.md`,
+   read that measure where the line says (for `music-artist`: Analytics for Artists, by the same
+   Studio reference) into `type-measure.json`. A measure the channel cannot give (no Official Artist
+   Channel toggle, for example) is written as such, and the audit judges the own uploads, saying so.
+5. Write `return.json`: gained, lost, net per month; the viewer groups and their change; the type's
+   measure, if any. What Studio did not show is "no data", never an estimate.
 
 **6 — The niche's market now.**
 
