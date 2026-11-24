@@ -26,6 +26,7 @@ An idea is a video someone wants that this channel can make better or differentl
 | `hook` | the first seconds in one sentence: the curiosity gap or the promise |
 | `thumbnail` | the concept in one sentence: subject, emotion, ≤ 3 words of text, colour; text adds to the title, does not repeat it |
 | `format` | `long`, `short`, `live` or `post` |
+| `production` | what kind of work it is — `new`, `version`, `compilation`, `clip`, `cover` or `other` — by the "Production" table of `channel-types.md` for the channel's type; every idea carries one, so each creation recipe offers only the kinds it can make |
 | `source` | what grounded it: `watch:<videoId>`, `trend`, `seed:<slug>`, `owner` |
 | `score` | 0–100 from `score_idea.py` |
 | `note` | traffic strategy (search / browse / trend), urgency, and the one-line "why now" |
@@ -87,3 +88,9 @@ Why now: … · Source: …
   Recon is the only writer of `idea`. A rejected idea is written once with `status rejected` and a
   `note`, so the next run does not propose it again.
 - New keywords: measured with youtube-demand and written as `seed` before the idea that uses them.
+- An idea's status follows the other recipes' records: a `plan` naming it, or a `take` with status
+  `in-work`, makes it `planned`; a `publish` naming it (or a `take` with status `published`) makes it
+  `published`; when every plan and take naming it is `dropped` and nothing published it, it goes
+  back to `shortlisted`.
+- A `cover` idea uses someone else's work: it stays an idea until the owner decides on the rights; no
+  creation recipe takes it on its own.

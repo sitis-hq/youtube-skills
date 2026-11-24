@@ -10,6 +10,23 @@ used three percentages that contradicted its other files); uplift figures ("8× 
 `music-artist` is new. Terms: **Hub** — recurring formats the subscribers come back for; **Help** —
 searchable answers to a need; **Hero** — a tentpole made to reach new people.
 
+## Production: what kind of work an idea is
+
+Every `idea` record carries `production`, so a creation recipe offers only the ideas it can make. The
+values are the same for every type; what each means for a type:
+
+| `production` | In general | music-artist | education, tutorial, niche-authority | entertainment, vlog, personal-brand, commentary, review |
+| --- | --- | --- | --- | --- |
+| `new` | a new original work | a new original song (its theme, mood, hook line, subgenre) | a new lesson, explainer or guide | a new video or episode |
+| `version` | another version of an existing work | an instrumental, acoustic, sped-up or remixed version of a released song (the note names it) | an updated or re-recorded lesson | a re-edit or extended cut |
+| `compilation` | a new video assembled from existing works | a mix or playlist of the channel's own songs | a "best of" or a course from existing lessons | a best-moments cut |
+| `clip` | a cut from one existing work | a Short from a released song or video | a Short from a lesson | a Short from an episode |
+| `cover` | someone else's work at the centre | a cover of another artist's song | a breakdown built on another creator's video | a reaction to someone else's video |
+| `other` | none of these | a live session, behind the scenes, a vlog | a Q&A, a live | a live, a community post |
+
+A `cover` needs rights the channel may not have, so it is never taken by a recipe on its own; the
+owner decides. A `compilation` or `version` names in its `note` which existing works it uses.
+
 Cadence below is a sustainable starting point for one creator, not a growth promise: consistency
 beats volume, and a cadence the channel cannot keep is worse than a lower one.
 

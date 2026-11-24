@@ -330,16 +330,18 @@ kind(Kind(
 ))
 
 IDEA_STATUS = _enum("new", "shortlisted", "planned", "rejected", "published")
+PRODUCTION = _enum("new", "version", "compilation", "clip", "cover", "other")
 
 kind(Kind(
     name="idea",
     key_doc="idea:<slug(title)>",
     writer="Recon",
     readers="Planning, Analytics, the creation recipes",
-    doc="A video idea grounded in a keyword. Recon alone moves its status, from Planning's plan and "
-        "the creation recipes' publish records: forward only, except that an idea whose only plan was "
-        "dropped (and that was never published) goes back to shortlisted. Planning writes its own plan "
-        "record rather than editing this one (one writer per record).",
+    doc="A video idea grounded in a keyword. Recon alone moves its status, from Planning's plan, the "
+        "creation recipes' take and publish records: forward only, except that an idea whose only plans "
+        "and takes were dropped (and that was never published) goes back to shortlisted. Planning and "
+        "the creation recipes write their own records rather than editing this one (one writer per "
+        "record).",
     fields={
         "title": req(_text, "the working title"),
         "keyword": req(_text, "the seed keyword it targets"),
@@ -350,8 +352,34 @@ kind(Kind(
         "source": req(_text, "what grounded it: watch:<id>, trend, seed:<slug>, owner, community"),
         "score": opt(_float(0, 100), "0-100, from youtube-strategy's score_idea.py"),
         "note": opt(_text, "anything the next reader needs"),
+        # What kind of work the idea is, so each creation recipe offers only what it can make; the
+        # values are the same for every channel type, and channel-types.md says what each means there.
+        "production": opt(PRODUCTION, "new, version, compilation, clip, cover or other"),
     },
     make_key=lambda d: f"idea:{slugify(d['title'])}",
+))
+
+kind(Kind(
+    name="take",
+    key_doc="take:<slug(idea)>",
+    writer="the creation recipes",
+    readers="Recon, Planning, Analytics, the creation recipes",
+    doc="An idea a creation recipe took into work. Keyed by the idea, so one idea is taken once: Recon "
+        "moves the idea to planned while the take is in-work, Planning plans nothing else for it, and "
+        "the creation recipes stop offering it. The taker moves it to published with the video, or to "
+        "dropped when the work is abandoned, which gives the idea back.",
+    fields={
+        "idea": req(_slug, "the idea's slug, without the idea: prefix"),
+        "status": req(_enum("in-work", "published", "dropped"), "where the work stands"),
+        "taken_at": req(_datetime, "when it was taken"),
+        "source": req(_text, "the recipe that took it"),
+        "title": opt(_text, "the working title of what is being made"),
+        "plan": opt(_match(re.compile(r"^plan:\d{4}-\d{2}-\d{2}:[a-z0-9-]+$"), "a plan key"),
+                    "the plan slot it fills, as its full key, when it came from one"),
+        "video_id": opt(_video, "the video it became, with status published"),
+        "note": opt(_text, "why it was dropped, or anything the next reader needs"),
+    },
+    make_key=lambda d: f"take:{d['idea']}",
 ))
 
 kind(Kind(
@@ -466,6 +494,7 @@ KEY_SHAPES = {
     "idea": re.compile(rf"^idea:{_S}$"),
     "plan": re.compile(rf"^plan:\d{{4}}-\d{{2}}-\d{{2}}:{_S}$"),
     "publish": re.compile(rf"^publish:{_V}$"),
+    "take": re.compile(rf"^take:{_S}$"),
     "replied": re.compile(rf"^replied:{_C}:(reply|pin|heart|hide|report)$"),
 }
 

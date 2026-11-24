@@ -194,7 +194,24 @@ or `changed`. A newer audit makes every older decision history, answered or not.
 A seed's key is its term alone (`seed:<slug(term)>`), so a term measured again for a new niche is
 rewritten with that niche: the old niche keeps every term the new one does not share.
 
-### 14. Changing a recipe
+### 14. Ideas go into work once
+
+- Recon writes every `idea` with `production` (`skills/youtube-strategy/references/channel-types.md`,
+  "Production"). A creation recipe declares which kinds it makes ("Create Music Release": `new` and
+  `version`).
+- A creation recipe starts by offering what to make: Planning's next `planned` slot for it, if any,
+  then the ideas of its kinds with status `shortlisted` or `new` and no `take`, best score first, at
+  most ten, one line each (title, hook, keyword, score). The owner picks one or names their own.
+- Taking an idea writes `take:<idea>` (status `in-work`) through `records.py write take` before any
+  other work; the video moves it to `published` (with `video_id`), abandoned work to `dropped`.
+- Recon moves the idea by the take (`in-work` → `planned`, `published` → `published`, all takes and
+  plans `dropped` → back to `shortlisted`); Planning plans nothing for an idea with a take
+  `in-work`; the creation recipes never offer it again.
+- The idea feeds the work by default: its hook, keyword and thumbnail concept are the starting point
+  of every step that makes the content, its metadata and its thumbnail. The `publish` record names
+  the `idea` (and the `plan`, when it came from one).
+
+### 15. Changing a recipe
 
 - Each change is a revision (`apply-template-revision`); a revision can be rolled back.
 - A step that acts on the channel keeps its intent (rule 7); a step that reads another recipe keeps

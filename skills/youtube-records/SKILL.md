@@ -40,6 +40,7 @@ calls `ai-integration upsert-template-record` only for a valid record. Output is
 | `idea` | `idea:<slug(title)>` | Recon | Planning, Analytics, creation recipes |
 | `plan` | `plan:<date>:<slot>` | Planning | creation recipes, Analytics, Recon |
 | `publish` | `publish:<videoId>` | creation recipes (e.g. Create Music Release) | Analytics, Planning, Recon |
+| `take` | `take:<slug(idea)>` | creation recipes | Recon, Planning, Analytics, creation recipes |
 | `replied` | `replied:<commentId>:<action>` | Community | Community |
 
 `schema` gives each kind's fields with their meaning; read it before writing a kind for the first time.

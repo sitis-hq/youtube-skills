@@ -226,5 +226,24 @@ class SeedNiche(unittest.TestCase):
         self.assertNotIn("niche", data)
 
 
+class TakeAndProduction(unittest.TestCase):
+    def test_an_idea_is_taken_once_by_its_slug(self):
+        key, data = records.build("take", dict(idea="shadow-on-the-wire", status="in-work",
+                                               taken_at="2026-11-24T22:00:00Z", source="Create Music Release"))
+        self.assertEqual(key, "take:shadow-on-the-wire")
+        records.validate_stored(key, data)
+
+    def test_a_take_names_a_plan_only_by_its_full_key(self):
+        with self.assertRaises(records.Refusal):
+            records.build("take", dict(idea="x", status="in-work", taken_at="2026-11-24T22:00:00Z",
+                                       source="cmr", plan="2026-12-05:main"))
+
+    def test_production_is_one_of_six(self):
+        base = dict(title="a b", keyword="k", hook="h", thumbnail="t", format="long", status="new", source="trend")
+        self.assertEqual(records.build("idea", {**base, "production": "cover"})[1]["production"], "cover")
+        with self.assertRaises(records.Refusal):
+            records.build("idea", {**base, "production": "song"})
+
+
 if __name__ == "__main__":
     unittest.main()
