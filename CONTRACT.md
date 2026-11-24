@@ -208,8 +208,11 @@ rewritten with that niche: the old niche keeps every term the new one does not s
 - Recon moves the idea by the take (`in-work` → `planned`, `published` → `published`, all takes and
   plans `dropped` → back to `shortlisted`); Planning plans nothing for an idea with a take
   `in-work`; the creation recipes never offer it again.
-- The idea feeds the work by default: its hook, keyword and thumbnail concept are the starting point
-  of every step that makes the content, its metadata and its thumbnail. The `publish` record names
+- The idea gives defaults, never answers: its title proposes the theme, its `hook` (how the video's
+  first seconds open — not a line of the content) the opening of the video, its keyword the main
+  keyword of the metadata, its thumbnail concept the thumbnail. An idea carries no story or script:
+  every question the recipe asks the owner (the story, the approvals) stays, and the owner's answer
+  wins. The `publish` record names
   the `idea` (and the `plan`, when it came from one).
 
 ### 15. Changing a recipe
