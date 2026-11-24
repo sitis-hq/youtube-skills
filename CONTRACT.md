@@ -197,8 +197,9 @@ rewritten with that niche: the old niche keeps every term the new one does not s
 ### 14. Ideas go into work once
 
 - Recon writes every `idea` with `production` (`skills/youtube-strategy/references/channel-types.md`,
-  "Production"). A creation recipe declares which kinds it makes ("Create Music Release": `new` and
-  `version`).
+  "Production"). A creation recipe declares which kinds it makes ("Create Music Release": `new` — it
+  writes and generates a song from nothing; a `version` needs the released song's audio, which it
+  does not take as input).
 - A creation recipe starts by offering what to make: Planning's next `planned` slot for it, if any,
   then the ideas of its kinds with status `shortlisted` or `new` and no `take`, best score first, at
   most ten, one line each (title, hook, keyword, score). The owner picks one or names their own.
