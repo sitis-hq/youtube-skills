@@ -543,6 +543,9 @@ kind(Kind(
         "plan": opt(_match(re.compile(r"^plan:\d{4}-\d{2}-\d{2}:[a-z0-9-]+$"), "a plan key"),
                     "the plan slot it fills, as its full key"),
         "duration": opt(_float(1, 43200), "the assembled mix's length in seconds"),
+        "upload_key": opt(_match(re.compile(r"^upload:video:[0-9a-f]{12}$"), "an upload intent key"),
+                          "the assembled file's upload key (intent.py key upload --file), set with status "
+                          "assembled: a file made again must give the same key before an upload resumes"),
         "upload_session": opt(_match(re.compile(r"^https://\S+$"), "an https session uri"),
                               "the open upload session (upload_video.py start), stored before any byte is sent"),
         "video_id": opt(_video, "the uploaded mix, with status published"),

@@ -75,6 +75,12 @@ class Mix(unittest.TestCase):
         with self.assertRaises(records.Refusal):
             self.mix(songs=[{**SONG_A, "bpm": 90}, SONG_B])
 
+    def test_the_assembled_file_is_named_by_its_upload_key(self):
+        _, data = self.mix(status="assembled", upload_key="upload:video:3c7ec80d4876")
+        self.assertEqual(data["upload_key"], "upload:video:3c7ec80d4876")
+        with self.assertRaises(records.Refusal):
+            self.mix(upload_key="upload:video:XYZ")
+
     def test_an_upload_session_is_an_https_uri(self):
         _, data = self.mix(status="assembled", upload_session="https://www.googleapis.com/upload/youtube/v3/videos?upload_id=x")
         self.assertTrue(data["upload_session"].startswith("https://"))
