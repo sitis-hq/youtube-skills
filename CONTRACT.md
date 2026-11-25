@@ -224,6 +224,11 @@ rewritten with that niche: the old niche keeps every term the new one does not s
   version of a contract record.
 - No fallbacks for data written before a field or rule existed: when the contract changes, the
   recipe that wrote the old data re-runs and writes it in the new shape.
+- A writer whose past work predates a record re-runs once to write it. "Create Music Release"
+  released songs before it wrote `publish`; its catalog step "Register published release videos",
+  added to one finished instance and run once, writes a `publish` (`release` = the instance's Spec id)
+  for each of those videos that is public. Such a `publish` names a release with no `release` record:
+  it is a video that is out, with nothing to plan or move — not a broken link.
 - A check of the whole set is a check against this file: each rule, for each recipe.
 
 ### 16. The audience's clock
