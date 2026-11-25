@@ -35,10 +35,63 @@ class Keys(unittest.TestCase):
 
     def test_two_slots_of_one_day_are_two_records(self):
         a = records.build("plan", dict(date="2026-11-10", slot="main", title="A", format="long",
-                                       status="planned", source="planning"))[0]
+                                       time="15:00", status="planned", source="planning"))[0]
         b = records.build("plan", dict(date="2026-11-10", slot="short-1", title="B", format="short",
-                                       status="planned", source="planning"))[0]
+                                       time="19:00", status="planned", source="planning"))[0]
         self.assertNotEqual(a, b)
+
+
+SPEC = "11111111-1111-4111-8111-111111111111"
+SONG_A = {"release": "22222222-2222-4222-8222-222222222222", "title": "Up the Will", "duration": 284.633,
+          "video_id": VIDEO}
+SONG_B = {"release": "33333333-3333-4333-8333-333333333333", "title": "Green as the Pines", "duration": 184.383,
+          "video_id": "Zx9Yw8Vu7Ts"}
+
+
+class Mix(unittest.TestCase):
+    def mix(self, **change):
+        fields = dict(spec=SPEC, theme="late-night r&b", status="listed", songs=[SONG_A, SONG_B],
+                      listed_at="2026-11-25T20:00:00Z", source="Create Music Release Mix")
+        fields.update(change)
+        return records.build("mix", {k: v for k, v in fields.items() if v is not None})
+
+    def test_a_mix_keeps_its_songs_in_order(self):
+        key, data = self.mix()
+        self.assertEqual(key, f"mix:{SPEC}")
+        self.assertEqual([s["title"] for s in data["songs"]], ["Up the Will", "Green as the Pines"])
+
+    def test_the_whole_list_can_be_set_at_once(self):
+        _, data = self.mix(songs=json.dumps([SONG_B, SONG_A]))
+        self.assertEqual(data["songs"][0]["title"], "Green as the Pines")
+
+    def test_a_mix_needs_two_different_songs_and_a_published_one_its_video(self):
+        for change, word in (({"songs": [SONG_A]}, "two songs"), ({"songs": [SONG_A, SONG_A]}, "twice"),
+                             ({"status": "published"}, "video_id")):
+            with self.assertRaises(records.Refusal) as ctx:
+                self.mix(**change)
+            self.assertIn(word, str(ctx.exception))
+
+    def test_a_song_carries_exactly_its_four_fields(self):
+        with self.assertRaises(records.Refusal):
+            self.mix(songs=[{**SONG_A, "bpm": 90}, SONG_B])
+
+    def test_an_upload_session_is_an_https_uri(self):
+        _, data = self.mix(status="assembled", upload_session="https://www.googleapis.com/upload/youtube/v3/videos?upload_id=x")
+        self.assertTrue(data["upload_session"].startswith("https://"))
+        with self.assertRaises(records.Refusal):
+            self.mix(upload_session="ftp://x")
+
+    def test_a_stored_mix_validates_and_a_lookalike_key_is_foreign(self):
+        key, data = self.mix()
+        self.assertEqual(records.validate_stored(key, data), "mix")
+        with self.assertRaises(records.Foreign):
+            records.validate_stored("mix:old-theme", data)
+
+    def test_a_plan_slot_carries_its_hour(self):
+        with self.assertRaises(records.Refusal) as ctx:
+            records.build("plan", dict(date="2026-11-10", slot="main", title="A", format="long",
+                                       status="planned", source="planning"))
+        self.assertIn("time", str(ctx.exception))
 
 
 class Refusals(unittest.TestCase):

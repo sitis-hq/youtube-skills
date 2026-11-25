@@ -149,6 +149,12 @@ def _enum(*allowed: str) -> Callable[[str, Any], str]:
 
 def _list_of(item: Callable[[str, Any], Any]) -> Callable[[str, Any], list[Any]]:
     def parse(name: str, raw: Any) -> list[Any]:
+        if isinstance(raw, str) and raw.strip().startswith("["):
+            # A whole list given at once (`update --set songs='[…]'`): it replaces the list.
+            try:
+                raw = json.loads(raw)
+            except json.JSONDecodeError:
+                raise Refusal(f"{name}: not a JSON list: {raw!r}") from None
         values = raw if isinstance(raw, list) else [raw]
         if not values:
             raise Refusal(f"{name} is empty")
@@ -184,6 +190,20 @@ def _move(name: str, raw: Any) -> dict[str, str]:
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     return {"from": _date(name, value["from"]), "to": _date(name, value["to"]),
             "at": _datetime(name, value.get("at") or now)}
+
+
+def _song(name: str, raw: Any) -> dict[str, Any]:
+    """One song of a mix, in play order: {release, title, duration, video_id}; JSON or a dict."""
+    value = raw
+    if isinstance(raw, str):
+        try:
+            value = json.loads(raw)
+        except json.JSONDecodeError:
+            raise Refusal(f"{name}: a song is JSON {{release, title, duration, video_id}}, got {raw!r}") from None
+    if not isinstance(value, dict) or set(value) != {"release", "title", "duration", "video_id"}:
+        raise Refusal(f"{name}: a song is exactly {{release, title, duration, video_id}}, got {raw!r}")
+    return {"release": _uuid(name, value["release"]), "title": _text(name, value["title"]),
+            "duration": _float(1, 3600)(name, value["duration"]), "video_id": _video(name, value["video_id"])}
 
 
 def _zone(name: str, value: Any) -> str:
@@ -456,6 +476,7 @@ kind(Kind(
     fields={
         "date": req(_date, "the day of release"),
         "slot": req(_slug, "the slot of that day: main, short-1, live"),
+        "time": req(_hhmm, "the publish hour, local HH:MM in profile:channel's timezone"),
         "title": req(_text, "the planned title"),
         "format": req(FORMAT, "long, short, live or post"),
         "status": req(_enum("planned", "in-progress", "published", "dropped"),
@@ -487,6 +508,48 @@ kind(Kind(
         "source": req(_text, "the recipe that published it"),
     },
     make_key=lambda d: f"publish:{d['video_id']}",
+))
+
+def _mix_is_whole(data: dict[str, Any]) -> None:
+    songs = data.get("songs") or []
+    if len(songs) < 2:
+        raise Refusal("a mix has at least two songs")
+    releases = [s["release"] for s in songs]
+    if len(set(releases)) != len(releases):
+        raise Refusal("a song appears twice in the mix")
+    if data.get("status") == "published" and not data.get("video_id"):
+        raise Refusal("a published mix names its video_id")
+
+
+kind(Kind(
+    name="mix",
+    key_doc="mix:<Spec id>",
+    writer="Create Music Release Mix",
+    readers="Create Music Release Mix",
+    doc="One mix video, keyed by its instance: the songs in play order (each a release's Spec id, its "
+        "16:9 video and length), the theme, where it stands, and the open upload session, so a later run "
+        "resumes the upload instead of sending it twice. listed = the songs proposed; approved = the "
+        "owner approved them; assembled = the file exists; published = uploaded; dropped = abandoned. "
+        "Earlier mixes' songs are what the next mix's overlap check reads.",
+    fields={
+        "spec": req(_uuid, "the mix's instance (Spec id); the key is mix:<spec>"),
+        "theme": req(_text, "what holds the songs together, as the owner approved it"),
+        "status": req(_enum("listed", "approved", "assembled", "published", "dropped"), "where it stands"),
+        "songs": req(_list_of(_song), "the songs in play order: {release, title, duration, video_id}; "
+                                      "repeat the flag, or set the whole list as JSON"),
+        "listed_at": req(_datetime, "when the songs were first proposed"),
+        "source": req(_text, "Create Music Release Mix"),
+        "idea": opt(_slug, "the idea made, without the idea: prefix"),
+        "plan": opt(_match(re.compile(r"^plan:\d{4}-\d{2}-\d{2}:[a-z0-9-]+$"), "a plan key"),
+                    "the plan slot it fills, as its full key"),
+        "duration": opt(_float(1, 43200), "the assembled mix's length in seconds"),
+        "upload_session": opt(_match(re.compile(r"^https://\S+$"), "an https session uri"),
+                              "the open upload session (upload_video.py start), stored before any byte is sent"),
+        "video_id": opt(_video, "the uploaded mix, with status published"),
+        "note": opt(_text, "why it was dropped, or anything the next reader needs"),
+    },
+    make_key=lambda d: f"mix:{d['spec']}",
+    checks=(_mix_is_whole,),
 ))
 
 kind(Kind(
@@ -561,6 +624,7 @@ KEY_SHAPES = {
     "publish": re.compile(rf"^publish:{_V}$"),
     "take": re.compile(rf"^take:{_S}$"),
     "release": re.compile(r"^release:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"),
+    "mix": re.compile(r"^mix:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"),
     "replied": re.compile(rf"^replied:{_C}:(reply|pin|heart|hide|report)$"),
 }
 

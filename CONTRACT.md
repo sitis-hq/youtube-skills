@@ -20,10 +20,13 @@ the contract: change this file first, then every recipe it touches.
 | "YouTube Planning" | monthly, the 1st | Onboarding, Daily Data, Recon, Analytics, Channel Audit, creation recipes |
 | "YouTube Community" | weekdays | Onboarding |
 | "YouTube Channel Audit" | quarterly, the 25th of the quarter's last month; first run by hand | Onboarding, Daily Data, Planning, creation recipes |
+| "Create Music Release Mix" | by hand, when the owner starts a mix (Planning's slot or an idea) | Onboarding, Planning, Recon, Create Music Release |
 
-A creation recipe ("Create Music Release" is the one in use) publishes videos and writes `publish`
-records. Recipes find each other by these exact names (`find-spec-template` ignores case). Every
-schedule is cron in UTC; a recipe's local hour is the channel's country's.
+The creation recipes ("Create Music Release", "Create Music Release Mix") publish videos and write
+`publish` records. Recipes find each other by these exact names: `find-spec-template` ignores case
+and matches a part of the name ("Create Music Release" also finds "Create Music Release Mix"), so
+take only the result whose name equals the one wanted. Every schedule is cron in UTC; a recipe's
+local hour is in `profile:channel`'s timezone (rule 16).
 
 ## Rules every recipe of the set follows
 
@@ -175,6 +178,14 @@ recipes read today:
 | `community-ideas.md` | Community → "Mine ideas from questions" | Recon |
 | `report-<date>.md`, `settings-reco.md`, `settings-desired.json` | Analytics → "Weekly report", "Settings recommendations" | Planning |
 | `audit-<quarter>.md`, `audit-decision.json` | Channel Audit → "Diagnosis and decision", "Owner review" | Planning, Onboarding, Analytics |
+| the song's lyrics and theme | Create Music Release → "Create text content" | Create Music Release Mix |
+| the master: the one `.wav` of the run; the summary's Subgenre row | Create Music Release → "Generate audio" | Create Music Release Mix |
+| the clean 16:9 cover (`*cover-16x9*`) | Create Music Release → "Create cover images" | Create Music Release Mix |
+| the 16:9 full video (`*16x9-full*.mp4`) | Create Music Release → "Create music videos" | Create Music Release Mix |
+
+Each comes from the newest passed run of its step (`list-step-artifacts`, which returns exactly
+that). File names changed over the recipe's life, so a reader matches the patterns above, never one
+exact name.
 
 ### 12. Keywords belong to a niche
 
@@ -198,7 +209,8 @@ rewritten with that niche: the old niche keeps every term the new one does not s
 - Recon writes every `idea` with `production` (`skills/youtube-strategy/references/channel-types.md`,
   "Production"). A creation recipe declares which kinds it makes ("Create Music Release": `new` — it
   writes and generates a song from nothing; a `version` needs the released song's audio, which it
-  does not take as input).
+  does not take as input). "Create Music Release Mix": `compilation`, format long — a mix of the
+  channel's own released songs, joined from their 16:9 videos.
 - A creation recipe starts by offering what to make: Planning's next `planned` slot for it, if any
   (only a recipe without its own cadence — rule 17), then the ideas of its kinds with status
   `shortlisted` or `new` and no `take`, best score first, at most ten, one line each (title, hook,
@@ -239,6 +251,8 @@ language and region" with the audience's country, and "Create the channel" puts 
 
 - Every local hour a recipe uses — when a video goes public, when a step asks the owner — is in that
   zone. No step writes a zone or an offset of its own ("ET", "19:00 New York").
+- A `plan` slot carries `time` (required, local HH:MM): Planning chooses the hour when it plans the
+  slot, and the recipe that fills it publishes at the slot's date and time in that zone.
 - A schedule is cron in UTC, worked out from `timezone` when it is set, for the time of year it is
   set; the platform has no zone on a schedule, so a local hour moves by one with daylight saving.
   The recipe says the local hour it means, so the owner can see the shift.
