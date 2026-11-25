@@ -27,6 +27,20 @@ values are the same for every type; what each means for a type:
 A `cover` needs rights the channel may not have, so it is never taken by a recipe on its own; the
 owner decides. A `compilation` or `version` names in its `note` which existing works it uses.
 
+**When a music-artist mix is possible.** One rule, for the recipe that proposes a `compilation` idea
+(Recon) and the one that makes it (Create Music Release Mix):
+
+- A song's genre is the subgenre at the end of its long video's `publish` title (Create Music
+  Release writes it there: "… (Official Music Video) Trap Soul"). Without one there, the release's
+  own texts may name it; a song whose genre cannot be read is unknown, never counted.
+- A song **fits** a theme when the theme's genre family is among the song's genres: for an r&b
+  theme, r&b, soul, neo-soul, alt r&b, and a hybrid that contains one of them ("Trap Soul",
+  "Hip-Hop/R&B") fit; trap, rap, hip-hop or drill alone do not, however dark or late-night their
+  mood. Mood narrows a fitting set; it never makes a song fit.
+- A mix is possible when at least 6 released songs fit, at least 20 minutes together.
+- A `compilation` idea is proposed only when a mix is possible; its `note` names the genre family
+  and the fitting songs. The maker checks again on the day: songs come out and go private.
+
 Cadence below is a sustainable starting point for one creator, not a growth promise: consistency
 beats volume, and a cadence the channel cannot keep is worse than a lower one.
 
