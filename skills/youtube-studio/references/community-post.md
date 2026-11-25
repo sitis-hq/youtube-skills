@@ -26,7 +26,7 @@ browser, under an intent, and only the agent's verification proves it went out.
    to this channel"` and report.
 4. In the composer: paste the text; for a poll pick the poll type and fill the options; for an image
    use the image type and upload the file. Respect the limits the composer shows.
-5. **Post** (or **Schedule** with the time the plan gives, in the channel's time zone).
+5. **Post** (or **Schedule** with the time the plan gives, in `profile:channel`'s `timezone`).
 
 ## Verify
 

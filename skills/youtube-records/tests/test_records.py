@@ -190,6 +190,7 @@ class Writing(unittest.TestCase):
     def test_identity_tokens_repeat(self):
         code, out = run("check", "profile", "--channel-id", CHANNEL, "--title", "Dustin Vane",
                         "--language", "en", "--niche", "dark pop", "--channel-type", "music-artist",
+                        "--timezone", "America/Chicago",
                         "--identity-token", "Dustin Vane", "--identity-token", "Neon Hearts")
         self.assertEqual(code, 0, out)
         self.assertEqual(out["data"]["identity_token"], ["Dustin Vane", "Neon Hearts"])
@@ -243,6 +244,20 @@ class TakeAndProduction(unittest.TestCase):
         self.assertEqual(records.build("idea", {**base, "production": "cover"})[1]["production"], "cover")
         with self.assertRaises(records.Refusal):
             records.build("idea", {**base, "production": "song"})
+
+
+class ProfileTimezone(unittest.TestCase):
+    BASE = dict(channel_id="UC" + "a" * 22, title="T", language="en", niche="n", channel_type="music-artist")
+
+    def test_a_profile_needs_an_iana_zone(self):
+        with self.assertRaises(records.Refusal):
+            records.build("profile", dict(self.BASE))
+        with self.assertRaises(records.Refusal):
+            records.build("profile", {**self.BASE, "timezone": "ET"})
+        with self.assertRaises(records.Refusal):
+            records.build("profile", {**self.BASE, "timezone": "UTC"})
+        self.assertEqual(records.build("profile", {**self.BASE, "timezone": "America/New_York"})[1]["timezone"],
+                         "America/New_York")
 
 
 if __name__ == "__main__":

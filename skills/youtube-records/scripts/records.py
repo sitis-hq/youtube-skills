@@ -163,6 +163,18 @@ _channel = _match(CHANNEL_ID, "a channel id starting with UC (24 characters)")
 _comment = _match(COMMENT_ID, "a comment id (or parent.reply)")
 _slug = _match(SLUG, "a slug of lowercase latin letters, digits and hyphens")
 
+
+def _zone(name: str, value: Any) -> str:
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+    text = str(value).strip()
+    try:
+        ZoneInfo(text)
+    except (ZoneInfoNotFoundError, ValueError):
+        raise Refusal(f"{name} must be an IANA time zone such as America/New_York, got {value!r}") from None
+    if "/" not in text:
+        raise Refusal(f"{name} must name a region, such as America/New_York, not {text!r}")
+    return text
+
 FORMAT = _enum("long", "short", "live", "post")
 
 
@@ -233,6 +245,9 @@ kind(Kind(
         "language": req(_match(re.compile(r"^[a-z]{2}(-[A-Z]{2})?$"), "a language code like en or pt-BR"),
                         "the language of its videos"),
         "country": opt(_match(re.compile(r"^[A-Z]{2}$"), "a two-letter country code"), "its main audience's country"),
+        # One home for the audience's clock: publish hours and every schedule's local hour come from
+        # here, not from a zone written into a step (CONTRACT.md, rule 16).
+        "timezone": req(_zone, "the main audience's IANA time zone, e.g. America/New_York"),
         "niche": req(_text, "what the channel is about, in a few words"),
         "channel_type": req(_text, "one of the types in youtube-strategy's references (e.g. music-artist)"),
         "identity_token": opt(_list_of(_text), "a name every title keeps as it is; repeat the flag"),

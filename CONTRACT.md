@@ -224,3 +224,15 @@ rewritten with that niche: the old niche keeps every term the new one does not s
 - No fallbacks for data written before a field or rule existed: when the contract changes, the
   recipe that wrote the old data re-runs and writes it in the new shape.
 - A check of the whole set is a check against this file: each rule, for each recipe.
+
+### 16. The audience's clock
+
+`profile:channel` carries `timezone` (required): the main audience's IANA zone, such as
+`America/New_York` — a country is not enough (the US has six). Onboarding writes it in "Audience,
+language and region" with the audience's country, and "Create the channel" puts it into the profile.
+
+- Every local hour a recipe uses — when a video goes public, when a step asks the owner — is in that
+  zone. No step writes a zone or an offset of its own ("ET", "19:00 New York").
+- A schedule is cron in UTC, worked out from `timezone` when it is set, for the time of year it is
+  set; the platform has no zone on a schedule, so a local hour moves by one with daylight saving.
+  The recipe says the local hour it means, so the owner can see the shift.

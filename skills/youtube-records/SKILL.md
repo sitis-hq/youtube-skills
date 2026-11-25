@@ -63,6 +63,8 @@ calls `ai-integration upsert-template-record` only for a valid record. Output is
   export ran and gave nothing, which a missing record cannot.
 - **Links, handles and other channel settings are config credentials of the project, not records.**
   A recipe that needs them declares them, and a run without them pauses and asks the owner.
+- **The audience's clock is the profile's.** `profile:channel` carries `timezone` (IANA, required);
+  every local hour a step uses is in that zone (`CONTRACT.md`, rule 16).
 - **Seeds belong to a niche.** Every `seed` is written with `--niche <profile:channel's niche>`
   (required). Read only the seeds whose `niche` equals the profile's niche now (`CONTRACT.md`,
   rule 12).
