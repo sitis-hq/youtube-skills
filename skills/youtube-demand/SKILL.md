@@ -100,7 +100,7 @@ Weekly budget guide for one channel (demand review): ~30 seeds → about $0.2–
 | --- | --- |
 | Call DataForSEO and save the response | `python3 <base>/scripts/dfs.py post\|get <path> [--data JSON \| --data-file F] --out F` |
 | Niche candidates ranked by openness, demand as a floor | `python3 <base>/scripts/niches.py --serp F [--serp F2 ...] --baselines F [--demand-floor N] [--labs F] [--trends F ... --anchor TERM] --as-of YYYY-MM-DD` |
-| Saved responses → `seed` rows | `python3 <base>/scripts/normalize.py --labs F [--labs F2] [--trends F ... --anchor TERM] [--serp F ...] [--channels F] [--only TERM ...] --as-of YYYY-MM-DD` |
+| Saved responses → `seed` rows | `python3 <base>/scripts/normalize.py --labs F [--labs F2] [--trends F ... --anchor TERM] [--serp F ...] [--channels F] [--only TERM ...] --as-of YYYY-MM-DD --niche <profile niche>` (required: every seed carries the niche it was measured for) |
 | Competition alone | `python3 <base>/scripts/yt_competition.py --serp F [--channels F]` or `--videos F --keyword K` |
 
 `normalize.py` merges all files by term (lowercased) and prints `rows` (only the `seed` fields,

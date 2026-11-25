@@ -18,7 +18,10 @@ RECORDS = HERE.parents[1] / "youtube-records" / "scripts" / "records.py"
 def run(*argv: str) -> tuple[int, dict]:
     out, err = io.StringIO(), io.StringIO()
     with redirect_stdout(out), redirect_stderr(err):
-        code = normalize.main(list(argv))
+        args = list(argv)
+        if "--niche" not in args:
+            args += ["--niche", "test niche"]
+        code = normalize.main(args)
     return code, json.loads(out.getvalue())
 
 

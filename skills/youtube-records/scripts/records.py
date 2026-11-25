@@ -267,7 +267,7 @@ kind(Kind(
         "intent": opt(_enum("informational", "navigational", "commercial", "transactional"), "search intent"),
         # A change of niche keeps the old keywords as history instead of deleting or mixing them:
         # readers take the seeds of the profile's niche now (CONTRACT.md, rule 12).
-        "niche": opt(_text, "profile:channel's niche when the seed was written"),
+        "niche": req(_text, "profile:channel's niche when the seed was written"),
     },
     make_key=lambda d: f"seed:{slugify(d['term'])}",
 ))

@@ -178,9 +178,8 @@ recipes read today:
 
 ### 12. Keywords belong to a niche
 
-A `seed` record carries `niche`: `profile:channel`'s niche when it was written. A reader uses the
-seeds whose `niche` equals the profile's niche now; when none carries a `niche` (seeds written
-before the field), all count. So a change of niche never deletes the old keywords — they stay as
+A `seed` record carries `niche` (required): `profile:channel`'s niche when it was written. A reader
+uses only the seeds whose `niche` equals the profile's niche now. So a change of niche never deletes the old keywords — they stay as
 history and come back if the channel returns to that niche — and never mixes them into the new one.
 
 ### 13. One audit decision counts at a time
@@ -188,8 +187,8 @@ history and come back if the channel returns to that niche — and never mixes t
 `audit-decision.json` carries `audit_id` (the audit run's date) and, when it replaces a decision of
 an earlier audit that was never answered, `supersedes` (that audit's id). A reader acts on a
 decision only when its `audit_id` is the newest audit's and its `owner_answer.answer` is `accepted`
-or `changed`. A newer audit makes every older decision history, answered or not. A decision written before
-`audit_id` existed takes as its id the date of the "Diagnosis and decision" run that wrote it.
+or `changed`. A newer audit makes every older decision history, answered or not. A decision
+without `audit_id` is not a decision of this contract: re-run its audit's "Diagnosis and decision".
 
 A seed's key is its term alone (`seed:<slug(term)>`), so a term measured again for a new niche is
 rewritten with that niche: the old niche keeps every term the new one does not share.
@@ -222,4 +221,6 @@ rewritten with that niche: the old niche keeps every term the new one does not s
   its `declare-read` (rule 5); a step's credential keys stay declared on that step (rule 6).
 - A reader skips what `records.py validate` calls foreign (exit 3) and stops only on another
   version of a contract record.
+- No fallbacks for data written before a field or rule existed: when the contract changes, the
+  recipe that wrote the old data re-runs and writes it in the new shape.
 - A check of the whole set is a check against this file: each rule, for each recipe.

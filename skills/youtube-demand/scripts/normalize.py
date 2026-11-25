@@ -48,7 +48,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import yt_competition  # noqa: E402
 
 INTENTS = {"informational", "navigational", "commercial", "transactional"}
-FIELDS = ("term", "source", "as_of", "volume", "cpc", "kd_web", "yt_interest", "yt_competition", "intent")
+FIELDS = ("term", "source", "as_of", "volume", "cpc", "kd_web", "yt_interest", "yt_competition", "intent", "niche")
 
 
 class Refusal(Exception):
@@ -243,6 +243,8 @@ def run(argv: list[str] | None = None) -> dict[str, Any]:
     p.add_argument("--channels", action="append", default=[], help="youtube-data `channels` output for subscriber counts")
     p.add_argument("--anchor", help="the term put into EVERY Trends request; required with more than one request")
     p.add_argument("--as-of", help="the day the numbers were read, YYYY-MM-DD (default: today, UTC)")
+    p.add_argument("--niche", required=True,
+                   help="profile:channel's niche the seeds are measured for; every seed record carries it")
     p.add_argument("--source", default="dataforseo",
                    help="the seed's source for rows with Labs data (default dataforseo); Trends-only rows get 'trends'")
     p.add_argument("--only", action="append", default=[],
@@ -316,6 +318,7 @@ def run(argv: list[str] | None = None) -> dict[str, Any]:
     out_rows = []
     for row in rows.values():
         row["as_of"] = as_of
+        row["niche"] = a.niche
         clean = {f: row[f] for f in FIELDS if row.get(f) is not None}
         out_rows.append({**clean, "write_args": write_args(clean)})
     out_rows.sort(key=lambda r: (-(r.get("volume") or 0), r["term"]))

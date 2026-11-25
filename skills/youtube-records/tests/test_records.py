@@ -77,7 +77,7 @@ class Refusals(unittest.TestCase):
                                            views_per_day="10", anomaly="big jump", source="data-api"))
 
     def test_keyword_difficulty_stays_on_its_own_scale(self):
-        _, data = records.build("seed", dict(term="lofi", source="dataforseo", as_of="2026-11-04", kd_web="37"))
+        _, data = records.build("seed", dict(term="lofi", source="dataforseo", as_of="2026-11-04", kd_web="37", niche="lofi"))
         self.assertEqual(data["kd_web"], 37)
         # The old contract stored 0..1; such a value is refused, not read as 0 % difficulty.
         self.assertIn("whole number", self.check("seed", term="lofi", source="dataforseo", as_of="2026-11-04",
@@ -221,9 +221,9 @@ class SeedNiche(unittest.TestCase):
         self.assertEqual(data["niche"], "alternative rnb")
         records.validate_stored("seed:rnb", data)
 
-    def test_a_seed_without_niche_still_reads(self):
-        _, data = records.build("seed", dict(term="rnb", source="dataforseo", as_of="2026-11-24"))
-        self.assertNotIn("niche", data)
+    def test_a_seed_without_niche_is_refused(self):
+        with self.assertRaises(records.Refusal):
+            records.build("seed", dict(term="rnb", source="dataforseo", as_of="2026-11-24"))
 
 
 class TakeAndProduction(unittest.TestCase):
