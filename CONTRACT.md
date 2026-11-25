@@ -126,9 +126,12 @@ A step declares exactly the keys it uses, with `declare-cred-key` on that step.
 | `POYO_API_KEY` | secret | the owner | `poyo` image generation |
 | `LINK_<NAME>` (e.g. `LINK_SPOTIFY`, `LINK_APPLE_MUSIC`, `LINK_INSTAGRAM`, `LINK_WEBSITE`) | config | Onboarding step 13, with `update-project-credentials` | links a recipe must put into descriptions or the About page |
 | `BUSINESS_EMAIL` | config | Onboarding step 13, with `update-project-credentials` | the channel's business contact, for the About page and descriptions |
+| `MUSIC_AI_GENERATED` | config | the first uploading step that finds it missing asks the owner once and sets it with `update-project-credentials --kind config` | `true`/`false`: this project's music is made with AI; every upload sets `status.containsSyntheticMedia` from it (YouTube Help 14328491) |
 
-If a declared key is missing when the step runs, the run pauses and asks the owner for it. A step
-never works around a missing key.
+If none of a step's declared keys is usable, the run pauses and the owner is told; when only some are
+missing, the run goes on and the owner is told which. A step needing a missing key stops and asks for
+it — except a config key the table says a recipe sets after asking the owner once. A step never works
+around a missing key.
 
 A session or a link is never written into a record or an artifact.
 
