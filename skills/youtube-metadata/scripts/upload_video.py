@@ -256,6 +256,20 @@ def send(connection: str, ids_fn, file: str, session: str) -> dict[str, Any]:
     def uncertain(error: str) -> dict[str, Any]:
         return {"ok": False, "key": key, "intent": "claimed", "uncertain": True, "error": error, "say": SAY_UNCERTAIN}
 
+    def done(value: dict[str, Any]) -> dict[str, Any]:
+        video_id = value.get("id")
+        if not video_id:
+            return uncertain("the finished upload answered without a video id")
+        try:
+            intent.commit(key, ids, {"video_id": video_id})
+        except (Refusal, intent.Refusal):
+            # Already committed by an earlier send of the same session: the upload stands once.
+            pass
+        return {"ok": True, "key": key, "video_id": video_id, "size": size, "resumed_at": sent_from,
+                "upload_units_used": UPLOAD_UNITS, "privacy": (value.get("status") or {}).get("privacyStatus"),
+                "publish_at": (value.get("status") or {}).get("publishAt"),
+                "say": "Uploaded. YouTube processes it next; set the thumbnail with apply_video.py thumbnail."}
+
     while True:
         # Every failure — a lost answer, a 5xx, a refreshed token — is followed by asking the session
         # again, and all of them together are bounded: a session that keeps failing is reported.
@@ -273,18 +287,7 @@ def send(connection: str, ids_fn, file: str, session: str) -> dict[str, Any]:
                 continue
             return uncertain(str(e))
         if state == "done":
-            video_id = value.get("id")
-            if not video_id:
-                return uncertain("the finished upload answered without a video id")
-            try:
-                intent.commit(key, ids, {"video_id": video_id})
-            except (Refusal, intent.Refusal):
-                # Already committed by an earlier send of the same session: the upload stands once.
-                pass
-            return {"ok": True, "key": key, "video_id": video_id, "size": size, "resumed_at": sent_from,
-                    "upload_units_used": UPLOAD_UNITS, "privacy": (value.get("status") or {}).get("privacyStatus"),
-                    "publish_at": (value.get("status") or {}).get("publishAt"),
-                    "say": "Uploaded. YouTube processes it next; set the thumbnail with apply_video.py thumbnail."}
+            return done(value)
         if state == "gone":
             return uncertain("the upload session is gone (404/410): it expired or was cancelled")
         offset = value
@@ -302,9 +305,20 @@ def send(connection: str, ids_fn, file: str, session: str) -> dict[str, Any]:
             SLEEP(CHECKS_AFTER_LOSS[min(troubles, len(CHECKS_AFTER_LOSS) - 1)])
             troubles += 1
             continue  # the next round asks the session what it holds
-        if status in (200, 201, 308):
+        if status in (200, 201):
+            # The last piece's answer carries the finished video; a status query after it is only the
+            # resume path, and YouTube need not answer it the same way.
+            try:
+                finished = json.loads(raw)
+            except (json.JSONDecodeError, ValueError):
+                finished = None
+            if isinstance(finished, dict) and finished.get("id"):
+                return done(finished)
             troubles = 0
-            continue  # the next round reads the state, so one rule handles every answer
+            continue
+        if status == 308:
+            troubles = 0
+            continue  # the next round reads the state
         if status == 401:
             token, troubles = _token(connection), troubles + 1
             continue

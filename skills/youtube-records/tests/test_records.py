@@ -64,6 +64,14 @@ class Mix(unittest.TestCase):
         _, data = self.mix(songs=json.dumps([SONG_B, SONG_A]))
         self.assertEqual(data["songs"][0]["title"], "Green as the Pines")
 
+    def test_the_command_line_takes_the_list_as_one_json_flag_or_one_flag_per_song(self):
+        base = ["check", "mix", "--spec", SPEC, "--theme", "t", "--status", "listed",
+                "--listed-at", "2026-11-25T20:00:00Z", "--source", "Create Music Release Mix"]
+        code, out = run(*base, "--songs", json.dumps([SONG_A, SONG_B]))
+        self.assertEqual(code, 0, out)
+        code, out = run(*base, "--songs", json.dumps(SONG_A), "--songs", json.dumps(SONG_B))
+        self.assertEqual(code, 0, out)
+
     def test_a_mix_needs_two_different_songs_and_a_published_one_its_video(self):
         for change, word in (({"songs": [SONG_A]}, "two songs"), ({"songs": [SONG_A, SONG_A]}, "twice"),
                              ({"status": "published"}, "video_id")):

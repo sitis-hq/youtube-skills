@@ -149,6 +149,8 @@ def _enum(*allowed: str) -> Callable[[str, Any], str]:
 
 def _list_of(item: Callable[[str, Any], Any]) -> Callable[[str, Any], list[Any]]:
     def parse(name: str, raw: Any) -> list[Any]:
+        if isinstance(raw, list) and len(raw) == 1 and isinstance(raw[0], str) and raw[0].strip().startswith("["):
+            raw = raw[0]  # `write … --songs '[…]'`: the repeatable flag hands one JSON list as one item
         if isinstance(raw, str) and raw.strip().startswith("["):
             # A whole list given at once (`update --set songs='[…]'`): it replaces the list.
             try:

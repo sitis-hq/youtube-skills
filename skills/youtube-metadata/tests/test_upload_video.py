@@ -23,7 +23,8 @@ VIDEO = "Zx9Yw8Vu7Ts"
 class FakeSession:
     """One resumable session as YouTube keeps it: the bytes it holds, and failures to inject."""
 
-    def __init__(self, held=0, start_status=200, lose_piece=None, gone=False, piece_status=None):
+    def __init__(self, held=0, start_status=200, lose_piece=None, gone=False, piece_status=None,
+                 query_after_done=None):
         self.received = bytearray()
         self.held = held
         self.start_status = start_status
@@ -33,6 +34,7 @@ class FakeSession:
         self.pieces = []
         self.size = None
         self.start_body = None
+        self.query_after_done = query_after_done
 
     def __call__(self, method, url, headers, body):
         if method == "POST":
@@ -46,6 +48,8 @@ class FakeSession:
         if self.gone:
             return 404, {}, b""
         if headers["Content-Range"].startswith("bytes */"):
+            if self.query_after_done and self.held >= self.size:
+                return self.query_after_done, {}, b""
             return self.state()
         start = int(headers["Content-Range"].split(" ")[1].split("-")[0])
         assert start == self.held, f"piece starts at {start}, the session holds {self.held}"
@@ -135,6 +139,13 @@ class Upload(unittest.TestCase):
         self.assertEqual(api.pieces, [0, 10, 20, 30, 40])
         rec = list(self.intent_state().values())[0]
         self.assertEqual((rec["status"], rec["result"]), ("committed", {"video_id": VIDEO}))
+
+    def test_the_last_pieces_answer_gives_the_video_without_another_query(self):
+        self.start(FakeSession())
+        api = FakeSession(query_after_done=404)  # a query after the end would read as a gone session
+        code, out = self.send(api)
+        self.assertEqual((code, out["video_id"]), (0, VIDEO))
+        self.assertEqual(list(self.intent_state().values())[0]["status"], "committed")
 
     def test_a_later_run_resumes_where_the_session_stopped(self):
         self.start(FakeSession())
