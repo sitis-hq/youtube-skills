@@ -175,6 +175,12 @@ New in this repository; written for channels whose videos are an artist's music.
   included) from "Other Channels" (fan videos whose main component is the song) (Help 18736729;
   youtube-studio `viewer-groups.md`): an artist whose songs grow there is not stalled. Music videos
   are compared only with the channel's own music videos.
+- **Releases have their own cadence** (CONTRACT.md, rule 17): the creation recipe that makes them
+  ("Create Music Release") owns their dates; `format-plan.md` lists (new, long) and the Shorts cut
+  from a release as its pairs, with no stand-alone Short slots for Planning unless the owner wants
+  some. Focus = the release pitched to Spotify editorial: one pitched release at a time, the pitch at
+  least 7 days before release (Release Radar), better 2–4 weeks; the recipe's settings hold the
+  rhythm (interval, focus every N, both leads).
 - **Between releases**: YouTube's artist playbook — a trailer about two weeks before, Shorts with the
   official audio, the music video as their related video, a release playlist, fan Shorts featured
   after release (artists.youtube resources). YouTube publishes no release cadence number.

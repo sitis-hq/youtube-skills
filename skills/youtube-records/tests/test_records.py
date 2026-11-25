@@ -260,5 +260,96 @@ class ProfileTimezone(unittest.TestCase):
                          "America/New_York")
 
 
+STORE_STUB = r"""#!/usr/bin/env python3
+import json, sys, os
+a = sys.argv[1:]
+store_path = os.environ["STUB_STORE"]
+store = json.load(open(store_path)) if os.path.exists(store_path) else {}
+def arg(n):
+    return a[a.index(n) + 1] if n in a else None
+if a[0] == "get-template-record":
+    rec = store.get(arg("--key"))
+    print(json.dumps({"success": True, "data": rec}))
+    sys.exit(0)
+key = arg("--key")
+data = json.load(open(arg("--data-file")))
+cur = store.get(key)
+if "--if-absent" in a and cur is not None:
+    print(json.dumps({"success": False, "error": {"type": "ConflictError", "message": "exists", "current": cur}}))
+    sys.exit(2)
+if "--if-updated-at" in a and (cur is None or cur["updatedAt"] != arg("--if-updated-at")):
+    print(json.dumps({"success": False, "error": {"type": "ConflictError", "message": "changed", "current": cur}}))
+    sys.exit(2)
+n = int(cur["updatedAt"]) + 1 if cur else 1
+store[key] = {"key": key, "data": data, "updatedAt": str(n)}
+json.dump(store, open(store_path, "w"))
+print(json.dumps({"success": True, "data": store[key]}))
+"""
+
+SPEC = "01a1827d-e3b1-7546-8c23-4a6252cdbe45"
+TASK = ("Process id: `11111111-1111-4111-8111-111111111111`\n"
+        "Spec id: `22222222-2222-4222-8222-222222222222`\n"
+        "Project id: `33333333-3333-4333-8333-333333333333`\n")
+
+
+class ConditionalWrites(unittest.TestCase):
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        d = Path(self.dir.name)
+        stub = d / "ai-integration"
+        stub.write_text(STORE_STUB)
+        stub.chmod(stub.stat().st_mode | stat.S_IEXEC)
+        os.environ["AI_INTEGRATION_BIN"] = str(stub)
+        os.environ["STUB_STORE"] = str(d / "store.json")
+        self.cwd = os.getcwd()
+        os.chdir(d)
+        Path("current-task.md").write_text(TASK)
+
+    def tearDown(self):
+        os.chdir(self.cwd)
+        os.environ.pop("AI_INTEGRATION_BIN", None)
+        os.environ.pop("STUB_STORE", None)
+        self.dir.cleanup()
+
+    def write_release(self, *extra):
+        return run("write", "release", "--spec", SPEC, "--date", "2026-12-05", "--time", "10:00",
+                   "--title", "Later Won't Wait", "--focus", "false", "--status", "held",
+                   "--held-at", "2026-11-25T15:00:00Z", "--source", "Create Music Release", *extra)
+
+    def test_if_absent_refuses_a_second_release_record_with_exit_4(self):
+        self.assertEqual(self.write_release("--if-absent")[0], 0)
+        code, out = self.write_release("--if-absent")
+        self.assertEqual(code, 4)
+        self.assertTrue(out["conflict"])
+
+    def test_update_moves_the_date_and_keeps_the_key(self):
+        self.write_release("--if-absent")
+        code, out = run("update", "--key", f"release:{SPEC}", "--set", "date=2026-12-12",
+                        "--append", "moves=2026-12-05>2026-12-12")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["data"]["date"], "2026-12-12")
+        self.assertEqual(out["data"]["moves"][0]["to"], "2026-12-12")
+
+    def test_update_cannot_change_a_key_field(self):
+        self.write_release("--if-absent")
+        code, out = run("update", "--key", f"release:{SPEC}", "--set", "spec=22222222-2222-4222-8222-222222222222")
+        self.assertEqual(code, 2)
+
+
+class ReleaseState(unittest.TestCase):
+    R = {"spec": SPEC, "date": "2026-12-05", "status": "committed"}
+
+    def test_released_needs_its_date_and_a_publish_naming_it(self):
+        self.assertEqual(records.release_state(self.R, [], "2026-12-06"), "active")
+        self.assertEqual(records.release_state(self.R, [{"release": SPEC}], "2026-12-06"), "released")
+        self.assertEqual(records.release_state(self.R, [{"release": SPEC}], "2026-12-04"), "active")
+
+    def test_a_held_release_long_past_its_date_counts_as_dropped(self):
+        held = {**self.R, "status": "held"}
+        self.assertEqual(records.release_state(held, [], "2026-12-19"), "active")
+        self.assertEqual(records.release_state(held, [], "2026-12-20"), "dropped")
+        self.assertEqual(records.release_state({**self.R}, [], "2027-02-01"), "active")
+
+
 if __name__ == "__main__":
     unittest.main()

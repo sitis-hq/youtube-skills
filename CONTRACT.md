@@ -199,9 +199,10 @@ rewritten with that niche: the old niche keeps every term the new one does not s
   "Production"). A creation recipe declares which kinds it makes ("Create Music Release": `new` — it
   writes and generates a song from nothing; a `version` needs the released song's audio, which it
   does not take as input).
-- A creation recipe starts by offering what to make: Planning's next `planned` slot for it, if any,
-  then the ideas of its kinds with status `shortlisted` or `new` and no `take`, best score first, at
-  most ten, one line each (title, hook, keyword, score). The owner picks one or names their own.
+- A creation recipe starts by offering what to make: Planning's next `planned` slot for it, if any
+  (only a recipe without its own cadence — rule 17), then the ideas of its kinds with status
+  `shortlisted` or `new` and no `take`, best score first, at most ten, one line each (title, hook,
+  keyword, score). The owner picks one or names their own.
 - Taking an idea writes `take:<idea>` (status `in-work`) through `records.py write take` before any
   other work; the video moves it to `published` (with `video_id`), abandoned work to `dropped`.
 - Recon moves the idea by the take (`in-work` → `planned`, `published` → `published`, all takes and
@@ -211,8 +212,8 @@ rewritten with that niche: the old niche keeps every term the new one does not s
   first seconds open — not a line of the content) the opening of the video, its keyword the main
   keyword of the metadata, its thumbnail concept the thumbnail. An idea carries no story or script:
   every question the recipe asks the owner (the story, the approvals) stays, and the owner's answer
-  wins. The `publish` record names
-  the `idea` (and the `plan`, when it came from one).
+  wins. The `publish` record names the `idea` (and the `plan` or the `release`, when it came from
+  one).
 
 ### 15. Changing a recipe
 
@@ -236,3 +237,40 @@ language and region" with the audience's country, and "Create the channel" puts 
 - A schedule is cron in UTC, worked out from `timezone` when it is set, for the time of year it is
   set; the platform has no zone on a schedule, so a local hour moves by one with daylight saving.
   The recipe says the local hour it means, so the owner can see the shift.
+
+### 17. Releases with their own cadence
+
+Some work has its own rhythm and outside constraints — a music release has a distributor date, a
+pitch window and a package of videos around one day. The creation recipe that makes it owns its
+releases and their dates; Planning does not plan them.
+
+- **What it owns.** The recipe declares the (`production`, format) pairs it owns. "Create Music
+  Release": (`new`, `long`) and the Shorts cut from its own releases. Onboarding's
+  `format-plan.md` lists the owned pairs; Planning's cadence counts only its own work; Planning
+  plans no slot for an owned pair. Everything else (mixes, performances, stand-alone videos) stays
+  Planning's.
+- **One record per release.** `release:<Spec id>` (`records.py schema release`): date, time (local
+  HH:MM in `profile:channel`'s `timezone`), title (the song, not the YouTube title), focus, idea,
+  status `held | committed | dropped`, `submitted_at`, `video_id`, `moves`. The date is a field, so
+  it can move; the key is the instance.
+- **Writing it.** The first write is `records.py write release … --if-absent`; every later change is
+  `records.py update --key release:<Spec id> …`, which writes only if nobody changed it meanwhile
+  and retries once. A lost condition exits 4: re-read and decide.
+- **Ensure the release.** Every step that needs the date reads the record first. None → it proposes
+  a date to the owner, writes the record, and goes on; another step writing it meanwhile (exit 4) →
+  it reads and uses that one. This is the one rule for every release, including one synced onto a
+  new revision half-way.
+- **The date.** A release's date is occupied while it is active. The owner confirms date, time and
+  focus once, where the recipe asks for it; on confirm the recipe re-reads the channel's active
+  releases and asks again if the date was taken meanwhile.
+- **Committed.** The first external act — a scheduled upload, a distributor submit — sets
+  `committed` before it happens. A held release may move freely; a committed one moves only by the
+  owner on the platforms themselves, and the recipe then records the move (`moves`) without
+  re-timing anything.
+- **State.** `records.py state` gives `active`, `released` (committed, its date passed, and a
+  `publish` naming the release) or `dropped` (status dropped, or held more than 14 days past its
+  date — a committed release never drops on its own). A dropped release frees its date; its take
+  counts as dropped.
+- **Planning** reads the releases of every declared creation recipe, treats active ones as occupied
+  dates, plans nothing of its own on such a date unless the owner says so, and shows them as fixed
+  rows in its calendar.

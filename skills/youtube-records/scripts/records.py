@@ -32,7 +32,7 @@ import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Any, Callable
 
 SCHEMA_VERSION = 1
@@ -162,6 +162,28 @@ _video = _match(VIDEO_ID, "an 11-character video id")
 _channel = _match(CHANNEL_ID, "a channel id starting with UC (24 characters)")
 _comment = _match(COMMENT_ID, "a comment id (or parent.reply)")
 _slug = _match(SLUG, "a slug of lowercase latin letters, digits and hyphens")
+_uuid = _match(re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"), "a uuid")
+_hhmm = _match(re.compile(r"^([01]\d|2[0-3]):[0-5]\d$"), "a local time HH:MM")
+
+
+def _move(name: str, raw: Any) -> dict[str, str]:
+    """One move of a release's date: {from, to, at}; given as JSON or as FROM>TO."""
+    value = raw
+    if isinstance(raw, str):
+        text = raw.strip()
+        if text.startswith("{"):
+            try:
+                value = json.loads(text)
+            except json.JSONDecodeError:
+                raise Refusal(f"{name}: not JSON: {raw!r}") from None
+        elif ">" in text:
+            a, b = text.split(">", 1)
+            value = {"from": a.strip(), "to": b.strip()}
+    if not isinstance(value, dict) or set(value) - {"from", "to", "at"} or not {"from", "to"} <= set(value):
+        raise Refusal(f"{name}: a move is {{from, to, at}} or FROM>TO, got {raw!r}")
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return {"from": _date(name, value["from"]), "to": _date(name, value["to"]),
+            "at": _datetime(name, value.get("at") or now)}
 
 
 def _zone(name: str, value: Any) -> str:
@@ -398,6 +420,33 @@ kind(Kind(
 ))
 
 kind(Kind(
+    name="release",
+    key_doc="release:<Spec id>",
+    writer="a creation recipe with its own cadence (Create Music Release)",
+    readers="Planning, Recon, Analytics, Pitch a Song on Spotify, the creation recipes",
+    doc="One release a creation recipe with its own cadence is making, keyed by its instance, so the "
+        "date is a field and can move. held = date chosen, nothing external done; committed = the "
+        "first external act (a scheduled upload, a distributor submit) is about to happen or happened; "
+        "dropped = abandoned. Released is not stored: see `records.py state` (CONTRACT.md, rule 17).",
+    fields={
+        "spec": req(_uuid, "the release's instance (Spec id); the key is release:<spec>"),
+        "date": req(_date, "the release day, in profile:channel's timezone"),
+        "time": req(_hhmm, "the release hour, local HH:MM in profile:channel's timezone"),
+        "title": req(_text, "the song's title (not the YouTube title)"),
+        "focus": req(_bool, "true for the release the channel promotes hardest (pitched)"),
+        "status": req(_enum("held", "committed", "dropped"), "held, committed or dropped"),
+        "held_at": req(_datetime, "when the date was first chosen"),
+        "source": req(_text, "the recipe that makes it"),
+        "idea": opt(_slug, "the idea made, without the idea: prefix; none for an own topic"),
+        "submitted_at": opt(_datetime, "when it went to the distributor"),
+        "video_id": opt(_video, "the main video, once uploaded"),
+        "moves": opt(_list_of(_move), "every change of date: {from, to, at} or FROM>TO; repeat the flag"),
+        "note": opt(_text, "why it was dropped, or anything the next reader needs"),
+    },
+    make_key=lambda d: f"release:{d['spec']}",
+))
+
+kind(Kind(
     name="plan",
     key_doc="plan:<YYYY-MM-DD>:<slot>",
     writer="Planning",
@@ -434,6 +483,7 @@ kind(Kind(
         "plan": opt(_match(re.compile(r"^plan:\d{4}-\d{2}-\d{2}:[a-z0-9-]+$"), "a plan key"),
                     "the plan slot, as its full key plan:<date>:<slot>"),
         "idea": opt(_slug, "the idea's slug, without the idea: prefix"),
+        "release": opt(_uuid, "the release (its Spec id) this video belongs to, when one does"),
         "source": req(_text, "the recipe that published it"),
     },
     make_key=lambda d: f"publish:{d['video_id']}",
@@ -510,6 +560,7 @@ KEY_SHAPES = {
     "plan": re.compile(rf"^plan:\d{{4}}-\d{{2}}-\d{{2}}:{_S}$"),
     "publish": re.compile(rf"^publish:{_V}$"),
     "take": re.compile(rf"^take:{_S}$"),
+    "release": re.compile(r"^release:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"),
     "replied": re.compile(rf"^replied:{_C}:(reply|pin|heart|hide|report)$"),
 }
 
@@ -562,6 +613,15 @@ ID_LINES = {
     "spec_template_id": re.compile(r"^Process id.*?`([0-9a-f-]{36})`", re.M),
     "spec_id": re.compile(r"^Spec id.*?`([0-9a-f-]{36})`", re.M),
 }
+PROJECT_LINE = re.compile(r"^Project id.*?`([0-9a-f-]{36})`", re.M)
+
+
+class Conflict(Refusal):
+    """A conditional write lost: the record exists already, or changed since it was read."""
+
+    def __init__(self, message: str, current: Any = None):
+        super().__init__(message)
+        self.current = current
 
 
 def run_ids(args: argparse.Namespace, task_file: str = "current-task.md") -> dict[str, str]:
@@ -583,7 +643,17 @@ def run_ids(args: argparse.Namespace, task_file: str = "current-task.md") -> dic
     return ids  # type: ignore[return-value]
 
 
-def upsert(key: str, data: dict[str, Any], ids: dict[str, str], spec_task_id: str | None) -> dict[str, Any]:
+def _platform_error(stdout: str) -> dict[str, Any]:
+    try:
+        doc = json.loads(stdout)
+    except json.JSONDecodeError:
+        return {}
+    err = doc.get("error") if isinstance(doc, dict) else None
+    return err if isinstance(err, dict) else {}
+
+
+def upsert(key: str, data: dict[str, Any], ids: dict[str, str], spec_task_id: str | None,
+           if_absent: bool = False, if_updated_at: str | None = None) -> dict[str, Any]:
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as fh:
         json.dump(data, fh, ensure_ascii=False)
         path = fh.name
@@ -597,16 +667,91 @@ def upsert(key: str, data: dict[str, Any], ids: dict[str, str], spec_task_id: st
         ]
         if spec_task_id:
             cmd += ["--spec-task-id", spec_task_id]
+        # The condition is the platform's, in one statement: a read here and a write later could
+        # not stop two steps of one release from overwriting each other.
+        if if_absent:
+            cmd += ["--if-absent"]
+        if if_updated_at:
+            cmd += ["--if-updated-at", if_updated_at]
         proc = subprocess.run(cmd, capture_output=True, text=True)
     finally:
         os.unlink(path)
     if proc.returncode != 0:
+        err = _platform_error(proc.stdout)
+        if err.get("type") == "ConflictError":
+            raise Conflict(f"{key}: {err.get('message') or 'the condition of the write was not met'}",
+                           err.get("current") or err.get("details"))
         raise Refusal(f"ai-integration refused the write (exit {proc.returncode}): "
                       f"{(proc.stdout or proc.stderr).strip()[:500]}")
     try:
         return json.loads(proc.stdout)
     except json.JSONDecodeError:
         return {"raw": proc.stdout.strip()[:500]}
+
+
+def get_record(key: str, ids: dict[str, str], project_id: str) -> dict[str, Any] | None:
+    """The stored record as the platform returns it ({key, data, updatedAt, …}), or None."""
+    cmd = [os.environ.get("AI_INTEGRATION_BIN", "ai-integration"), "get-template-record",
+           "--spec-template-id", ids["spec_template_id"], "--project-id", project_id, "--key", key]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.returncode != 0:
+        raise Refusal(f"ai-integration refused the read (exit {proc.returncode}): "
+                      f"{(proc.stdout or proc.stderr).strip()[:500]}")
+    try:
+        doc = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        raise Refusal(f"ai-integration answered something that is not JSON: {proc.stdout[:200]}") from None
+    rec = doc.get("data") if isinstance(doc, dict) and "data" in doc else doc
+    return rec if isinstance(rec, dict) and rec else None
+
+
+def update(key: str, sets: list[str], appends: list[str], ids: dict[str, str], project_id: str,
+           spec_task_id: str | None) -> dict[str, Any]:
+    """Read, merge, write only if nobody changed it meanwhile; one retry, then refuse."""
+    kind_name = key.split(":", 1)[0]
+    if kind_name not in KINDS:
+        raise Refusal(f"unknown kind {kind_name!r}")
+    for attempt in (1, 2):
+        rec = get_record(key, ids, project_id)
+        if rec is None:
+            raise Refusal(f"{key} does not exist: write it first")
+        data = {k: v for k, v in (rec.get("data") or {}).items() if k != "v"}
+        for item in sets:
+            field, sep, value = item.partition("=")
+            if not sep:
+                raise Refusal(f"--set takes field=value, got {item!r}")
+            data[field.strip()] = value
+        for item in appends:
+            field, sep, value = item.partition("=")
+            if not sep:
+                raise Refusal(f"--append takes field=value, got {item!r}")
+            current = data.get(field.strip()) or []
+            data[field.strip()] = [*current, value] if isinstance(current, list) else [current, value]
+        new_key, built = build(kind_name, data)
+        if new_key != key:
+            raise Refusal(f"the change moves the record to {new_key!r}; a key field cannot change")
+        try:
+            written = upsert(key, built, ids, spec_task_id, if_updated_at=str(rec.get("updatedAt") or ""))
+            return {"ok": True, "key": key, "data": built, "written": written, "attempts": attempt}
+        except Conflict:
+            if attempt == 2:
+                raise
+    raise Refusal("unreachable")
+
+
+def release_state(release: dict[str, Any], publishes: list[dict[str, Any]], today: str) -> str:
+    """active, released or dropped — the contract's rule, in one place (CONTRACT.md, rule 17)."""
+    status = release.get("status")
+    if status == "dropped":
+        return "dropped"
+    day = date.fromisoformat(release["date"])
+    now = date.fromisoformat(today)
+    if status == "held" and (now - day).days > 14:
+        return "dropped"
+    spec = release.get("spec")
+    if status == "committed" and day <= now and any(p.get("release") == spec for p in publishes):
+        return "released"
+    return "active"
 
 
 # ── command line ───────────────────────────────────────────────────────────────────────────────
@@ -628,6 +773,10 @@ def add_kind_parsers(sub: argparse._SubParsersAction, command: str, help_text: s
             kp.add_argument("--spec-template-id", help="this run's Process id")
             kp.add_argument("--spec-id", help="this run's Spec id")
             kp.add_argument("--spec-task-id", help="this run's step, when known")
+            cond = kp.add_mutually_exclusive_group()
+            cond.add_argument("--if-absent", action="store_true",
+                              help="write only if the record does not exist yet (exit 4 if it does)")
+            cond.add_argument("--if-updated-at", help="write only if the record is still at this updatedAt")
 
 
 def parser() -> argparse.ArgumentParser:
@@ -638,13 +787,26 @@ def parser() -> argparse.ArgumentParser:
     add_kind_parsers(sub, "key", "print the key alone")
     add_kind_parsers(sub, "check", "validate and print, without writing")
     add_kind_parsers(sub, "write", "validate and upsert into this recipe's memory")
+    up = sub.add_parser("update", help="change fields of a stored record, only if nobody changed it meanwhile")
+    up.add_argument("--key", required=True)
+    up.add_argument("--set", action="append", default=[], metavar="FIELD=VALUE")
+    up.add_argument("--append", action="append", default=[], metavar="FIELD=VALUE",
+                    help="add one item to a list field (e.g. moves=2026-11-28>2026-12-05)")
+    up.add_argument("--spec-template-id", help="this run's Process id")
+    up.add_argument("--spec-id", help="this run's Spec id")
+    up.add_argument("--project-id", help="this run's Project id")
+    up.add_argument("--spec-task-id", help="this run's step, when known")
+    st = sub.add_parser("state", help="active, released or dropped, for a release record")
+    st.add_argument("--data", required=True, help="the release record's data as JSON")
+    st.add_argument("--publishes", help="a JSON file: the publish records' data (a list)")
+    st.add_argument("--today", help="YYYY-MM-DD in profile:channel's timezone (default: today, UTC)")
     vp = sub.add_parser("validate", help="check a stored record")
     vp.add_argument("--key", required=True)
     vp.add_argument("--data", required=True, help="the record's data as JSON")
     return p
 
 
-RUN_FLAGS = {"command", "kind", "spec_template_id", "spec_id", "spec_task_id"}
+RUN_FLAGS = {"command", "kind", "spec_template_id", "spec_id", "spec_task_id", "if_absent", "if_updated_at"}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -660,6 +822,27 @@ def main(argv: list[str] | None = None) -> int:
             if not isinstance(data, dict):
                 raise Refusal("--data must be a JSON object")
             out = {"ok": True, "kind": validate_stored(args.key, data)}
+        elif args.command == "update":
+            ids = run_ids(args)
+            project_id = args.project_id
+            if not project_id:
+                try:
+                    with open("current-task.md", encoding="utf-8") as fh:
+                        m = PROJECT_LINE.search(fh.read())
+                    project_id = m.group(1) if m else None
+                except OSError:
+                    project_id = None
+            if not project_id:
+                raise Refusal("update needs --project-id (or the Project id line in current-task.md)")
+            out = update(args.key, args.set, args.append, ids, project_id, args.spec_task_id)
+        elif args.command == "state":
+            try:
+                rel = json.loads(args.data)
+                pubs = json.load(open(args.publishes, encoding="utf-8")) if args.publishes else []
+            except (OSError, json.JSONDecodeError) as e:
+                raise Refusal(f"cannot read the input: {e}") from None
+            today = args.today or datetime.now(timezone.utc).date().isoformat()
+            out = {"ok": True, "state": release_state(rel, pubs if isinstance(pubs, list) else [], today)}
         else:
             raw = {k: v for k, v in vars(args).items() if k not in RUN_FLAGS and v is not None}
             if args.command == "key":
@@ -670,8 +853,14 @@ def main(argv: list[str] | None = None) -> int:
                 out = {"key": key, "data": data}
             else:
                 ids = run_ids(args)
-                result = upsert(key, data, ids, args.spec_task_id)
+                result = upsert(key, data, ids, args.spec_task_id,
+                                if_absent=args.if_absent, if_updated_at=args.if_updated_at)
                 out = {"ok": True, "key": key, "data": data, "written": result}
+    except Conflict as e:
+        # Exit 4: the write was conditional and lost — re-read and decide, never retry blindly.
+        print(json.dumps({"ok": False, "conflict": True, "error": str(e), "current": e.current},
+                         ensure_ascii=False))
+        return 4
     except Foreign as e:
         # Exit 3, apart from 2: a reader skips a foreign key and goes on; it stops only on a version.
         print(json.dumps({"ok": False, "foreign": True, "error": str(e)}, ensure_ascii=False))

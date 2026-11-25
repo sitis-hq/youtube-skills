@@ -21,16 +21,20 @@ percentages are dropped (thresholds.md); the 3-title rule stays.
 1. **Close the past**: for each earlier `plan` slot, find its `publish` record (by `plan` or `idea`
    field); write the slot again with `status published` (Planning owns `plan`), or `dropped` with a
    note in the artifact.
-2. **Count the month's slots** from the cadence: long-form days, Shorts, lives, posts; Hero moments
+2. **Leave out what others own.** The active releases of the declared creation recipes with their own
+   cadence (`release:` records, CONTRACT.md rule 17) are fixed rows of the calendar: their dates are
+   occupied, and the (production, format) pairs those recipes own — in `format-plan.md` — get no slot
+   here, nor do the Shorts cut from them.
+3. **Count the month's slots** from the cadence: long-form days, Shorts, lives, posts; Hero moments
    placed on their dates.
-3. **Fill slots** in score order, respecting: pillar rotation (no two consecutive long-form slots
+4. **Fill slots** in score order, respecting: pillar rotation (no two consecutive long-form slots
    from one pillar unless the cadence forces it); trend share ≤ 30 % of slots (thresholds.md); flash
    trends in the first week or not at all; seasonal ideas published before their date with the
    lead time counted backwards.
-4. **Per long-form slot**, 3 working titles — search-led, browse-led, hybrid — each with the
+5. **Per long-form slot**, 3 working titles — search-led, browse-led, hybrid — each with the
    keyword and identity tokens verbatim; the thumbnail concept; the hook type; when the channel
    runs Shorts, 2–3 Shorts cut candidates from it.
-5. **Balance check** and the production timeline (what is scripted, made, edited and published
+6. **Balance check** and the production timeline (what is scripted, made, edited and published
    each week, sized for the stated resources).
 
 ## Output (artifact `calendar-[YYYY-MM].md`)

@@ -41,6 +41,7 @@ calls `ai-integration upsert-template-record` only for a valid record. Output is
 | `plan` | `plan:<date>:<slot>` | Planning | creation recipes, Analytics, Recon |
 | `publish` | `publish:<videoId>` | creation recipes (e.g. Create Music Release) | Analytics, Planning, Recon |
 | `take` | `take:<slug(idea)>` | creation recipes | Recon, Planning, Analytics, creation recipes |
+| `release` | `release:<Spec id>` | creation recipes with their own cadence | Planning, Recon, Analytics, Pitch a Song on Spotify, creation recipes |
 | `replied` | `replied:<commentId>:<action>` | Community | Community |
 
 `schema` gives each kind's fields with their meaning; read it before writing a kind for the first time.
@@ -65,6 +66,10 @@ calls `ai-integration upsert-template-record` only for a valid record. Output is
   A recipe that needs them declares them, and a run without them pauses and asks the owner.
 - **The audience's clock is the profile's.** `profile:channel` carries `timezone` (IANA, required);
   every local hour a step uses is in that zone (`CONTRACT.md`, rule 16).
+- **Conditional writes.** `write … --if-absent` (only if new) and `update --key K --set f=v --append f=v`
+  (read, merge, write only if unchanged, one retry). A lost condition exits 4: re-read, never retry
+  blindly. `state --data '<release>' --publishes F` gives active / released / dropped (`CONTRACT.md`,
+  rule 17).
 - **Seeds belong to a niche.** Every `seed` is written with `--niche <profile:channel's niche>`
   (required). Read only the seeds whose `niche` equals the profile's niche now (`CONTRACT.md`,
   rule 12).
