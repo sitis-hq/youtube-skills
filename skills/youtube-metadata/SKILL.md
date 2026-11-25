@@ -1,6 +1,6 @@
 ---
 name: youtube-metadata
-description: Write and check a video's titles, description, tags, hashtags, chapters and Shorts metadata, and plan thumbnail/title A/B tests (Test & Compare, judged by watch time). One generic rule set for every channel type — identity names kept verbatim, keywords from demand data, fixed parts from the recipe; check_metadata.py lints YouTube's hard limits; apply_video.py applies an approved change to a published video under an intent. Use when a step writes or repackages metadata (Planning & optimization, the creation recipes) or prepares an A/B test.
+description: Write and check a video's titles, description, tags, hashtags, chapters and Shorts metadata, and plan thumbnail/title A/B tests (Test & Compare, judged by watch time). One generic rule set for every channel type — identity names kept verbatim, keywords from demand data, fixed parts from the recipe; check_metadata.py lints YouTube's hard limits; apply_video.py applies an approved change to a published video under an intent; upload_video.py uploads a new video once, resumable across runs. Use when a step writes or repackages metadata (Planning & optimization, the creation recipes) or prepares an A/B test.
 ---
 
 # YouTube metadata
@@ -73,6 +73,31 @@ python3 <base>/scripts/apply_video.py thumbnail --video-id <id> --image thumb.jp
   the connection lacks the scope; there is no Studio playbook for a video's details, so stop that
   change and ask the owner to make it by hand (the output's `playbook` says so).
 - Costs: videos.list 1 unit, videos.update and thumbnails.set 50 each.
+
+## Uploading a new video
+
+One upload per file, in two commands, so an interrupted upload resumes instead of uploading twice:
+
+```bash
+python3 <base>/scripts/upload_video.py start --file video.mp4 --meta meta.json   # claims, opens a session, sends nothing
+#   → store "session_uri" in the recipe's own record NOW, before any byte is sent
+python3 <base>/scripts/upload_video.py send --file video.mp4 --session <stored session_uri>
+```
+
+- `meta.json`: `title`, `description`, `tags`, `categoryId` (default 10), `defaultLanguage`,
+  `defaultAudioLanguage`, `publishAt` (ISO with zone; private until then) or `privacy`,
+  `selfDeclaredMadeForKids` (required), `containsSyntheticMedia` (optional). Lint the text with
+  `check_metadata.py` first; the script also refuses YouTube's hard limits before claiming.
+- The key is `upload:video:<digest of the file>` (`intent.py key upload --file`): the same file is one
+  upload whatever its metadata.
+- `start` on an open claim acts on nothing: run `send` with the stored session; with none stored the
+  outcome is unknown — ask the owner. A refused start fails the intent (no session, no video).
+- `send` asks the session what it holds before sending: all of it → takes the video id; part →
+  sends the rest; gone (expired after about a week, or cancelled) → `"uncertain": true`: do not
+  upload again, check Studio and tell the owner. Finished → the intent is committed with the id.
+- Then set the thumbnail with `apply_video.py thumbnail` and write the `publish` record.
+- Cost: 1 unit of the separate Video Uploads bucket (100 uploads a day). A video over 15 minutes
+  needs the channel's `long_uploads` to be `allowed` (youtube-data `data_api.py channels --mine`).
 
 ## Shorts
 

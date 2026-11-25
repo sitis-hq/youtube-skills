@@ -68,8 +68,12 @@ def digest_file(path: str) -> str:
     # The content, not the file name, is the intention: the same banner uploaded under another name
     # is the same action, and a new design is a new one.
     try:
+        h = hashlib.sha256()
         with open(path, "rb") as fh:
-            return hashlib.sha256(fh.read()).hexdigest()[:12]
+            # In pieces: a long video is gigabytes, and its digest must not need that much memory.
+            for piece in iter(lambda: fh.read(8 * 1024 * 1024), b""):
+                h.update(piece)
+        return h.hexdigest()[:12]
     except OSError as e:
         raise Refusal(f"cannot read {path}: {e.strerror}") from None
 
