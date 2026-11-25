@@ -275,10 +275,10 @@ key = arg("--key")
 data = json.load(open(arg("--data-file")))
 cur = store.get(key)
 if "--if-absent" in a and cur is not None:
-    print(json.dumps({"success": False, "error": {"type": "ConflictError", "message": "exists", "current": cur}}))
+    print(json.dumps({"success": False, "error": {"type": "ConflictError", "message": "exists"}, "data": cur}))
     sys.exit(2)
 if "--if-updated-at" in a and (cur is None or cur["updatedAt"] != arg("--if-updated-at")):
-    print(json.dumps({"success": False, "error": {"type": "ConflictError", "message": "changed", "current": cur}}))
+    print(json.dumps({"success": False, "error": {"type": "ConflictError", "message": "changed"}, "data": cur}))
     sys.exit(2)
 n = int(cur["updatedAt"]) + 1 if cur else 1
 store[key] = {"key": key, "data": data, "updatedAt": str(n)}
@@ -321,6 +321,7 @@ class ConditionalWrites(unittest.TestCase):
         code, out = self.write_release("--if-absent")
         self.assertEqual(code, 4)
         self.assertTrue(out["conflict"])
+        self.assertEqual(out["current"]["data"]["date"], "2026-12-05")
 
     def test_update_moves_the_date_and_keeps_the_key(self):
         self.write_release("--if-absent")

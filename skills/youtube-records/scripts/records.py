@@ -679,8 +679,13 @@ def upsert(key: str, data: dict[str, Any], ids: dict[str, str], spec_task_id: st
     if proc.returncode != 0:
         err = _platform_error(proc.stdout)
         if err.get("type") == "ConflictError":
-            raise Conflict(f"{key}: {err.get('message') or 'the condition of the write was not met'}",
-                           err.get("current") or err.get("details"))
+            # The platform answers a lost condition with exit 2 and the current record (or null) in
+            # `data` (ADR-373); exit 2 alone would not tell it from a refusal.
+            try:
+                current = json.loads(proc.stdout).get("data")
+            except (json.JSONDecodeError, AttributeError):
+                current = None
+            raise Conflict(f"{key}: {err.get('message') or 'the condition of the write was not met'}", current)
         raise Refusal(f"ai-integration refused the write (exit {proc.returncode}): "
                       f"{(proc.stdout or proc.stderr).strip()[:500]}")
     try:
