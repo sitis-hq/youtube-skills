@@ -79,7 +79,8 @@ def video_item(i, views=100):
     return {"id": i, "snippet": {"channelId": "UC" + "a" * 22, "channelTitle": "Ch", "title": f"T {i}",
                                  "publishedAt": "2026-10-01T00:00:00Z", "liveBroadcastContent": "none"},
             "statistics": {"viewCount": str(views), "commentCount": "3"},
-            "contentDetails": {"duration": "PT4M13S"}}
+            "contentDetails": {"duration": "PT4M13S"},
+            "status": {"privacyStatus": "public", "uploadStatus": "processed"}}
 
 
 class Token(Patched):
@@ -129,6 +130,8 @@ class Videos(Patched):
         self.assertEqual(out["missing"], [vid(7)])
         row = out["videos"][0]
         self.assertEqual((row["duration_s"], row["views"], row["likes"]), (253, 100, None))
+        self.assertEqual((row["privacy"], row["upload_status"], row["publish_at"]), ("public", "processed", None))
+        self.assertIn("status", fake.calls[0][2]["part"])
         self.assertRegex(out["as_of"], r"^\d{4}-\d{2}-\d{2}$")
 
     def test_ids_file_reads_records_and_drops_repeats(self):

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Read YouTube Data API v3 within quota: videos, channels, a channel's uploads, search.
 
-  data_api.py videos   --id ID [--id ID ...] | --ids-file F   stats, snippet, duration (1 unit / 50)
-  data_api.py channels --id UC... | --handle @name | --mine   channel facts and uploads playlist
+  data_api.py videos   --id ID [--id ID ...] | --ids-file F   stats, snippet, duration, privacy (1 unit / 50)
+  data_api.py channels --id UC... | --handle @name | --mine   channel facts, uploads playlist, long uploads
   data_api.py uploads  --channel-id UC... | --mine [--max N] [--since DATE] [--with-stats]
   data_api.py search   --q TEXT [--published-after DATE] [--order viewCount] [--pages 1]
                        100 units a page; refused beyond --budget
@@ -77,6 +77,7 @@ def collect_ids(values: list[str] | None, ids_file: str | None) -> list[str]:
 
 def video_row(item: dict[str, Any]) -> dict[str, Any]:
     sn, st, cd = item.get("snippet", {}), item.get("statistics", {}), item.get("contentDetails", {})
+    ss = item.get("status", {})
     duration = cd.get("duration")
     try:
         seconds = parse_duration(duration) if duration and duration not in ("P0D", "PT0S") else None
@@ -97,13 +98,18 @@ def video_row(item: dict[str, Any]) -> dict[str, Any]:
         "category_id": sn.get("categoryId"),
         "language": sn.get("defaultAudioLanguage") or sn.get("defaultLanguage"),
         "tags": sn.get("tags", []),
+        # Whether a video is out: public and processed. publish_at is shown only to the channel's
+        # owner, and only while a private video waits for its scheduled time.
+        "privacy": ss.get("privacyStatus"),
+        "upload_status": ss.get("uploadStatus"),
+        "publish_at": ss.get("publishAt"),
     }
 
 
 def fetch_videos(client: _yt.Client, ids: list[str], with_description: bool = False) -> dict[str, Any]:
     rows, seen = [], set()
     for batch in _yt.batches(ids, 50):
-        page = client.data_api("videos", {"part": "snippet,statistics,contentDetails",
+        page = client.data_api("videos", {"part": "snippet,statistics,contentDetails,status",
                                           "id": ",".join(batch), "maxResults": 50})
         for item in page.get("items", []):
             row = video_row(item)
@@ -122,6 +128,9 @@ def channel_row(item: dict[str, Any]) -> dict[str, Any]:
     sn, st, cd = item.get("snippet", {}), item.get("statistics", {}), item.get("contentDetails", {})
     return {
         "channel_id": item["id"],
+        # "allowed" when the channel may upload videos longer than 15 minutes (a verified channel);
+        # shown only to the channel's owner, so absent for another channel.
+        "long_uploads": item.get("status", {}).get("longUploadsStatus"),
         "title": sn.get("title"),
         "handle": sn.get("customUrl"),
         "published_at": sn.get("publishedAt"),
@@ -141,7 +150,7 @@ def cmd_videos(client: _yt.Client, a: argparse.Namespace) -> dict[str, Any]:
 
 
 def cmd_channels(client: _yt.Client, a: argparse.Namespace) -> dict[str, Any]:
-    params: dict[str, Any] = {"part": "snippet,statistics,contentDetails", "maxResults": 50}
+    params: dict[str, Any] = {"part": "snippet,statistics,contentDetails,status", "maxResults": 50}
     if a.mine:
         params["mine"] = "true"
     elif a.handle:

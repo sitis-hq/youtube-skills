@@ -19,8 +19,8 @@ the owner connects YouTube on the project's credentials page — ask them.
 
 | Need | Command | Cost |
 | --- | --- | --- |
-| Stats, title, duration of videos (a dated snapshot) | `data_api.py videos --id ID,ID --ids-file F` | 1 unit / 50 videos |
-| Channel facts: subscribers, video count, created, uploads playlist | `data_api.py channels --id UC... \| --handle @x \| --mine` | 1 unit |
+| Stats, title, duration, privacy and processing status of videos (a dated snapshot; scheduled time to the owner) | `data_api.py videos --id ID,ID --ids-file F` | 1 unit / 50 videos |
+| Channel facts: subscribers, video count, created, uploads playlist, whether uploads over 15 minutes are allowed (own channel) | `data_api.py channels --id UC... \| --handle @x \| --mine` | 1 unit |
 | A channel's latest uploads, with stats | `data_api.py uploads --channel-id UC... --max 20 --with-stats` | 1 unit / 50 + videos |
 | Search | `data_api.py search --q "..." --published-after D --order viewCount` | **100 units a page**; refused over `--budget` (200) |
 | Per-video views, watch time, AVD, APV, subscribers, for own videos | `analytics.py video-metrics --id ... --start D --end D` | Analytics quota |
