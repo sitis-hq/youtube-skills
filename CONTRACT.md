@@ -284,7 +284,7 @@ releases and their dates; Planning does not plan them.
   new revision half-way.
 - **The date.** A release's date is occupied while it is active. Release dates are Fridays (music's
   global release day, and the day Spotify's Release Radar refreshes); the time is the project's
-  `MUSIC_RELEASE_TIME`. The owner confirms date and time where the recipe asks for it; on confirm the
+  `YOUTUBE_PUBLISH_TIME` (one setting for the publish hour of every recipe of the set). The owner confirms date and time where the recipe asks for it; on confirm the
   recipe re-reads the channel's active releases and asks again if the date was taken meanwhile. A
   held date is re-checked by every step that uses it; one that can no longer be reached gets a new
   proposal first.

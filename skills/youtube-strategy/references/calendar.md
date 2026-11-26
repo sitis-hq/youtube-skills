@@ -12,8 +12,8 @@ percentages are dropped (thresholds.md); the 3-title rule stays.
 - This recipe's earlier `plan` records and the creation recipes' `publish` records — to close
   published slots and not plan an idea twice.
 - Seasonal dates: owner-provided events and release dates, holidays in the audience's country.
-- The publish hour: the project's setting (`YOUTUBE_PUBLISH_TIME`; a creation recipe's own, e.g.
-  `MUSIC_RELEASE_TIME`). It is not a growth lever — publish time does not affect a video's long-term
+- The publish hour: the project's setting (`YOUTUBE_PUBLISH_TIME`, one setting for every recipe of the set,
+  releases included). It is not a growth lever — publish time does not affect a video's long-term
   performance except Live and Premieres (Help 141805; thresholds.md "Never recommended") — so no
   "best hour" is measured or recommended.
 
