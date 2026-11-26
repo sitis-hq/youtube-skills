@@ -16,7 +16,7 @@ Commands (all print JSON on stdout; a refusal exits 2 with {"ok": false, "error"
   records.py pitch-slot --at ISO --zone Z
                                        may a pitch go out today (21 days after the last one)
   records.py pitch-date --today D [--slot-opens-on D]
-                                       the earliest release day a pitch can make
+                                       the earliest release day our rules allow a pitch for
   records.py validate --key K --data JSON
                                        check a stored record a reader got back
 
@@ -872,9 +872,6 @@ def release_state(release: dict[str, Any], publishes: list[dict[str, Any]], toda
 PITCH_GAP_DAYS = 21
 # A pitch goes out at least this many days before release, or not at all (the owner's rule).
 PITCH_LEAD_DAYS = 21
-# The worst delivery-to-listing time artists report: distributor review, delivery, and the release
-# showing in Spotify for Artists' Upcoming tab (spotify-pitch skill, pitch-timing-research.md).
-SPOTIFY_LISTING_DAYS = 21
 
 
 def pitch_slot(pitched_at: list[str], zone: str, today: str, gap: int = PITCH_GAP_DAYS) -> dict[str, Any]:
@@ -896,18 +893,24 @@ def pitch_slot(pitched_at: list[str], zone: str, today: str, gap: int = PITCH_GA
     return {"open": now >= opens, "last": last.isoformat(), "opens_on": opens.isoformat()}
 
 
-def pitch_date(today: str, slot_opens_on: str | None) -> str:
-    """The earliest release day a pitch can still make, if the distributor gets the release today.
+def pitch_date(today: str, slot_opens_on: str | None) -> dict[str, str]:
+    """The earliest release day our own rules allow a pitch for, and the day Spotify must list it by.
 
-    The pitch needs the release listed in Spotify for Artists (worst case SPOTIFY_LISTING_DAYS after
-    the submit) and an open slot, and then PITCH_LEAD_DAYS before release. It is computed on the day
-    of the decision, from that day's facts: when the owner reaches the submit is not knowable in
-    advance, so an earlier estimate is only a proposal for a date that may still move.
+    Only the deterministic rules are computed: the slot and the lead. How long the distributor and
+    Spotify take is not predicted — it changes without notice — so it is stated as a deadline
+    (`listed_by` = release day − PITCH_LEAD_DAYS) and observed by the pitching recipe, never
+    estimated. `listed_by_for(<chosen day>)` gives the deadline for any later day the owner picks.
     """
     now = date.fromisoformat(today)
-    listed = date.fromordinal(now.toordinal() + SPOTIFY_LISTING_DAYS)
-    earliest_pitch = max(listed, date.fromisoformat(slot_opens_on)) if slot_opens_on else listed
-    return date.fromordinal(earliest_pitch.toordinal() + PITCH_LEAD_DAYS).isoformat()
+    pitch = max(now, date.fromisoformat(slot_opens_on)) if slot_opens_on else now
+    earliest = date.fromordinal(pitch.toordinal() + PITCH_LEAD_DAYS)
+    return {"earliest": earliest.isoformat(), "listed_by": pitch.isoformat()}
+
+
+def listed_by_for(release_day: str) -> str:
+    """The last day Spotify may list a release for it still to be pitched (PITCH_LEAD_DAYS before)."""
+    day = date.fromisoformat(release_day)
+    return date.fromordinal(day.toordinal() - PITCH_LEAD_DAYS).isoformat()
 
 
 def _parse_instant(raw: str) -> datetime:
@@ -966,9 +969,10 @@ def parser() -> argparse.ArgumentParser:
                     help="when a pitch was submitted or claimed with no known outcome; repeat")
     ps.add_argument("--zone", required=True, help="profile:channel's timezone")
     ps.add_argument("--today", help="YYYY-MM-DD in that timezone (default: today there)")
-    pd = sub.add_parser("pitch-date", help="the earliest release day a pitch can make, submitting today")
+    pd = sub.add_parser("pitch-date", help="the earliest release day our rules allow a pitch for")
     pd.add_argument("--today", required=True, help="YYYY-MM-DD in profile:channel's timezone")
     pd.add_argument("--slot-opens-on", help="pitch-slot's opens_on, when the slot is not open yet")
+    pd.add_argument("--release-day", help="a day the owner chose: also give its listing deadline")
     vp = sub.add_parser("validate", help="check a stored record")
     vp.add_argument("--key", required=True)
     vp.add_argument("--data", required=True, help="the record's data as JSON")
@@ -1010,8 +1014,12 @@ def main(argv: list[str] | None = None) -> int:
             out = {"ok": True, **pitch_slot(args.at, args.zone, _date("today", today))}
         elif args.command == "pitch-date":
             slot = _date("slot-opens-on", args.slot_opens_on) if args.slot_opens_on else None
-            out = {"ok": True, "earliest": pitch_date(_date("today", args.today), slot),
-                   "lead_days": PITCH_LEAD_DAYS, "listing_days": SPOTIFY_LISTING_DAYS}
+            out = {"ok": True, **pitch_date(_date("today", args.today), slot), "lead_days": PITCH_LEAD_DAYS}
+            if args.release_day:
+                chosen = _date("release-day", args.release_day)
+                out["release_day"] = chosen
+                out["release_day_listed_by"] = listed_by_for(chosen)
+                out["release_day_can_be_pitched"] = chosen >= out["earliest"]
         elif args.command == "state":
             try:
                 rel = json.loads(args.data)
