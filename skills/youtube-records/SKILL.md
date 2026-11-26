@@ -74,7 +74,9 @@ calls `ai-integration upsert-template-record` only for a valid record. Output is
   rule 17).
 - **The pitch slot.** `pitch-slot --at <each pitch that may have happened> --zone <profile timezone>`
   says whether a pitch may go out today and when the slot opens: never within 21 days of the last
-  pitch, counted in days of the channel's calendar (`CONTRACT.md`, rule 17).
+  pitch, counted in days of the channel's calendar; `pitch-date --today D [--slot-opens-on D]` gives the
+  earliest release day a pitch can still make when the distributor gets the release today
+  (`CONTRACT.md`, rule 17).
 - **Seeds belong to a niche.** Every `seed` is written with `--niche <profile:channel's niche>`
   (required). Read only the seeds whose `niche` equals the profile's niche now (`CONTRACT.md`,
   rule 12).

@@ -301,7 +301,12 @@ releases and their dates; Planning does not plan them.
   writes them; it keeps its own `pitched:<release Spec id>`. Pitches are never closer than 21 days:
   `records.py pitch-slot` over every pitch that may have happened (submitted, or claimed with no
   known outcome), in days of `profile:channel`'s timezone, per project. The slot limits pitches, not
-  releases, which may come as often as the recipe makes them.
+  releases, which may come as often as the recipe makes them. A pitch goes out at least 21 days
+  before release or not at all. The earliest release day a pitch can make is `records.py
+  pitch-date`, computed on the day of the distributor submit from that day's facts (the worst
+  listing time, the slot, the lead); a date proposed earlier is only a held proposal. When the
+  owner keeps an earlier date, the release goes out unpitched — his choice, made with the
+  consequence shown.
 - **Planning** reads the releases of every declared creation recipe, treats active ones as occupied
   dates, plans nothing of its own on such a date unless the owner says so, and shows them as fixed
   rows in its calendar.

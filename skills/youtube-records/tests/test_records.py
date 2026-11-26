@@ -474,6 +474,13 @@ class Pitch(unittest.TestCase):
         self.assertEqual(records.pitch_slot([], "America/New_York", "2026-11-26"),
                          {"open": True, "last": None, "opens_on": None})
 
+    def test_the_pitch_date_waits_for_the_listing_and_the_slot_then_the_lead(self):
+        # Submitting on 11-26: listed by 12-17 at worst, slot open 12-14 → pitch 12-17 → release 01-07.
+        self.assertEqual(records.pitch_date("2026-11-26", "2026-12-14"), "2027-01-07")
+        # A slot that opens after the listing decides.
+        self.assertEqual(records.pitch_date("2026-11-26", "2026-12-28"), "2027-01-18")
+        self.assertEqual(records.pitch_date("2026-11-26", None), "2027-01-07")
+
     def test_the_command_line_answers_the_same(self):
         code, out = run("pitch-slot", "--at", "2026-11-23T11:19:02Z", "--zone", "America/New_York",
                         "--today", "2026-12-14")
@@ -481,6 +488,8 @@ class Pitch(unittest.TestCase):
         self.assertTrue(out["open"])
         code, out = run("pitch-slot", "--at", "2026-11-23T11:19:02", "--zone", "America/New_York")
         self.assertEqual(code, 2, out)
+        code, out = run("pitch-date", "--today", "2026-11-26", "--slot-opens-on", "2026-12-14")
+        self.assertEqual((code, out["earliest"]), (0, "2027-01-07"))
 
 
 if __name__ == "__main__":
