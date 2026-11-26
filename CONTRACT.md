@@ -282,31 +282,35 @@ releases and their dates; Planning does not plan them.
   a date to the owner, writes the record, and goes on; another step writing it meanwhile (exit 4) →
   it reads and uses that one. This is the one rule for every release, including one synced onto a
   new revision half-way.
-- **The date.** A release's date is occupied while it is active. The owner confirms date, time and
-  whether the release may be pitched once, where the recipe asks for it; on confirm the recipe re-reads the channel's active
-  releases and asks again if the date was taken meanwhile.
+- **The date.** A release's date is occupied while it is active. Release dates are Fridays (music's
+  global release day, and the day Spotify's Release Radar refreshes); the time is the project's
+  `MUSIC_RELEASE_TIME`. The owner confirms date and time where the recipe asks for it; on confirm the
+  recipe re-reads the channel's active releases and asks again if the date was taken meanwhile. A
+  held date is re-checked by every step that uses it; one that can no longer be reached gets a new
+  proposal first.
 - **Committed.** The first external act — a scheduled upload, a distributor submit — sets
   `committed` before it happens. A held release may move freely; a committed one moves only by the
   owner on the platforms themselves, and the recipe then records the move (`moves`) without
   re-timing anything.
-- **State.** `records.py state` gives `active`, `released` (committed, its date passed, and a
-  `publish` naming the release) or `dropped` (status dropped, or held more than 14 days past its
-  date — a committed release never drops on its own). A dropped release frees its date; its take
-  counts as dropped.
-- **Pitching.** The owner decides which releases may be pitched to Spotify editorial: `pitch_ok`,
-  asked with the date, silence = no — a pitch is irreversible, and silence never opts into one. Any
-  number of releases may be allowed. The pitch description is approved by the owner in the creation
-  recipe and stored as `pitch` before the distributor submit; a release without it is not pitched,
-  and nothing drafts one in its place. "Pitch a Song on Spotify" reads release records and never
-  writes them; it keeps its own `pitched:<release Spec id>`. Pitches are never closer than 21 days:
-  `records.py pitch-slot` over every pitch that may have happened (submitted, or claimed with no
-  known outcome), in days of `profile:channel`'s timezone, per project. The slot limits pitches, not
-  releases, which may come as often as the recipe makes them. A pitch goes out at least 21 days
-  before release or not at all. Only our own rules are computed in advance: `records.py pitch-date`
-  gives the earliest release day the slot and the lead allow, and the day Spotify must list the
-  release by (release day − 21). The platforms' timing — distributor review, delivery, listing —
-  is never estimated: the owner is told the deadline, and the pitching recipe observes the listing
-  and reports when the deadline passed without it. The owner picks the date with that shown.
+- **State.** `records.py state` gives `active`, `lapsed` (held, and its date has passed — an
+  observation: the owner may come back to it at any time), `released` (committed, its date passed,
+  and a `publish` naming the release) or `dropped` (only the owner's stop). Nothing about a release
+  is inferred from elapsed time. A lapsed or dropped release occupies no date; a dropped release's
+  take counts as dropped, a lapsed one's stays taken.
+- **Pitching.** Our rules, one computation (`records.py pitch-plan`), used both for what the
+  creation recipe promises and for what "Pitch a Song on Spotify" does: pitches at least 21 days
+  apart (days in `profile:channel`'s timezone, per project — one project is one Spotify artist); a
+  pitch at least 21 days before release or not at all; Spotify's one pitch at a time (the next once
+  the pitched song is out); **one reservation** — at most one release waits for a pitch
+  (`pitch_reservation:channel`, written by the creation recipe with a single conditional write and no
+  retry; free or live is computed). The owner decides per release (`records.py consent`: yes,
+  declined, unanswered), asked only while the reservation is free; silence leaves it unanswered — a
+  pitch is irreversible and silence never opts into one. The description is approved by the owner in
+  the creation recipe and stored as `pitch` before the pitch; nothing drafts one in its place. The
+  pitching recipe reads release records and the reservation and never writes them; it keeps its own
+  `pitched:<album id>` (also a pitch the owner made by hand, once observed). The platforms' and the
+  owner's timing is never estimated: the owner is shown a window [slot opens, release − 21] and the
+  conditions a pitch needs; the pitching recipe observes the listing and reports what it saw.
 - **Planning** reads the releases of every declared creation recipe, treats active ones as occupied
   dates, plans nothing of its own on such a date unless the owner says so, and shows them as fixed
   rows in its calendar.

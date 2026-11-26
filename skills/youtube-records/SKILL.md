@@ -1,6 +1,6 @@
 ---
 name: youtube-records
-description: The memory contract between the YouTube channel recipes — record kinds (profile, seed, watch, velocity, studio, idea, plan, publish, take, release, pitched, mix, replied), their keys, fields and units. Use whenever a step writes a record to template memory or looks one up that another YouTube recipe wrote; never write or build such a key by hand.
+description: The memory contract between the YouTube channel recipes — record kinds (profile, seed, watch, velocity, studio, idea, plan, publish, take, release, pitched, pitch_reservation, mix, replied), their keys, fields and units. Use whenever a step writes a record to template memory or looks one up that another YouTube recipe wrote; never write or build such a key by hand.
 ---
 
 # YouTube records
@@ -42,7 +42,8 @@ calls `ai-integration upsert-template-record` only for a valid record. Output is
 | `publish` | `publish:<videoId>` | creation recipes (e.g. Create Music Release) | Analytics, Planning, Recon |
 | `take` | `take:<slug(idea)>` | creation recipes | Recon, Planning, Analytics, creation recipes |
 | `release` | `release:<Spec id>` | creation recipes with their own cadence | Planning, Recon, Analytics, Pitch a Song on Spotify, creation recipes |
-| `pitched` | `pitched:<release Spec id>` | Pitch a Song on Spotify | Pitch a Song on Spotify, Create Music Release |
+| `pitched` | `pitched:<Spotify album id>` | Pitch a Song on Spotify | Pitch a Song on Spotify, Create Music Release, Analytics |
+| `pitch_reservation` | `pitch_reservation:channel` | Create Music Release | Pitch a Song on Spotify, Create Music Release |
 | `mix` | `mix:<Spec id>` | Create Music Release Mix | Create Music Release Mix |
 | `replied` | `replied:<commentId>:<action>` | Community | Community |
 
@@ -68,15 +69,18 @@ calls `ai-integration upsert-template-record` only for a valid record. Output is
   A recipe that needs them declares them, and a run without them pauses and asks the owner.
 - **The audience's clock is the profile's.** `profile:channel` carries `timezone` (IANA, required);
   every local hour a step uses is in that zone (`CONTRACT.md`, rule 16).
-- **Conditional writes.** `write … --if-absent` (only if new) and `update --key K --set f=v --append f=v`
-  (read, merge, write only if unchanged, one retry). A lost condition exits 4: re-read, never retry
-  blindly. `state --data '<release>' --publishes F` gives active / released / dropped (`CONTRACT.md`,
+- **Conditional writes.** `write … --if-absent` (only if new), `write … --if-updated-at U` (only if
+  unchanged since read, no retry) and `update --key K --set f=v --unset f --append f=v` (read, merge,
+  write only if unchanged, one retry). A lost condition exits 4: re-read, never retry blindly. The
+  pitch reservation is taken only with `write --if-absent` or `--if-updated-at`, never `update`.
+  `state --data '<release>' --publishes F` gives active / lapsed / released / dropped (`CONTRACT.md`,
   rule 17).
-- **The pitch slot.** `pitch-slot --at <each pitch that may have happened> --zone <profile timezone>`
-  says whether a pitch may go out today and when the slot opens: never within 21 days of the last
-  pitch, counted in days of the channel's calendar; `pitch-date --today D [--slot-opens-on D] [--release-day D]`
-  gives the earliest release day our rules allow a pitch for and the day Spotify must list it by;
-  the platforms' timing is never estimated (`CONTRACT.md`, rule 17).
+- **The pitch plan.** `consent --data '<release>'` → yes / declined / unanswered. `pitch-plan --today D
+  --lead-days N --releases F [--pitched F] [--open-claims F] [--reservation JSON] [--publishes F]
+  [--candidate SPEC]` → when the next pitch slot opens, whether the reservation is live or free (and
+  why), its window, and for a candidate what to offer: the Yes date with its window, the No date, or
+  why it cannot be offered. Only our rules are computed; the platforms' timing is never estimated
+  (`CONTRACT.md`, rule 17).
 - **Seeds belong to a niche.** Every `seed` is written with `--niche <profile:channel's niche>`
   (required). Read only the seeds whose `niche` equals the profile's niche now (`CONTRACT.md`,
   rule 12).

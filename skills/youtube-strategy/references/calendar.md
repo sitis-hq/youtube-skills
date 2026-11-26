@@ -19,8 +19,9 @@ percentages are dropped (thresholds.md); the 3-title rule stays.
 ## Steps
 
 1. **Close the past**: for each earlier `plan` slot, find its `publish` record (by `plan` or `idea`
-   field); write the slot again with `status published` (Planning owns `plan`), or `dropped` with a
-   note in the artifact.
+   field); write the slot again with `status published` (Planning owns `plan`). A slot whose date
+   passed with no publish is reported as missed by date and left as it is; it is `dropped` only when
+   the owner says so.
 2. **Leave out what others own.** The active releases of the declared creation recipes with their own
    cadence (`release:` records, CONTRACT.md rule 17) are fixed rows of the calendar: their dates are
    occupied, and the (production, format) pairs those recipes own — in `format-plan.md` — get no slot

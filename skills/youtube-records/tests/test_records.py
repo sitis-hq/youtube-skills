@@ -398,18 +398,36 @@ class ConditionalWrites(unittest.TestCase):
         self.assertEqual(out["data"]["date"], "2026-12-12")
         self.assertEqual(out["data"]["moves"][0]["to"], "2026-12-12")
 
-    def test_the_approved_pitch_is_set_on_a_release_the_owner_allowed(self):
+    def test_yes_then_do_not_pitch_unsets_the_consent_and_the_text_in_one_update(self):
+        # Why one update: the schema refuses every intermediate state (a pitch without consent,
+        # consent without its time), so a step that changed them one by one would be refused half-way.
         self.write_release("--if-absent")
         code, out = run("update", "--key", f"release:{SPEC}", "--set", "pitch_ok=true",
+                        "--set", "pitch_ok_at=2026-11-27T10:00:00Z",
                         "--set", "pitch=A late-night drive through a city that forgot you.")
         self.assertEqual(code, 0, out)
-        self.assertTrue(out["data"]["pitch_ok"])
+        code, out = run("update", "--key", f"release:{SPEC}", "--set", "pitch_ok=false",
+                        "--set", "pitch_declined_at=2026-11-28T10:00:00Z",
+                        "--unset", "pitch", "--unset", "pitch_ok_at")
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("pitch", out["data"])
+        self.assertEqual(records.consent(out["data"]), "declined")
 
     def test_a_pitch_on_a_release_the_owner_did_not_allow_is_refused(self):
         self.write_release("--if-absent")
         code, out = run("update", "--key", f"release:{SPEC}", "--set", "pitch=Some text.")
         self.assertEqual(code, 2, out)
         self.assertIn("pitch_ok", out["error"])
+
+    def test_a_consent_needs_its_time(self):
+        self.write_release("--if-absent")
+        code, out = run("update", "--key", f"release:{SPEC}", "--set", "pitch_ok=true")
+        self.assertEqual(code, 2, out)
+
+    def test_a_required_field_cannot_be_unset(self):
+        self.write_release("--if-absent")
+        code, out = run("update", "--key", f"release:{SPEC}", "--unset", "date")
+        self.assertEqual(code, 2, out)
 
     def test_update_cannot_change_a_key_field(self):
         self.write_release("--if-absent")
@@ -418,82 +436,55 @@ class ConditionalWrites(unittest.TestCase):
 
 
 class ReleaseState(unittest.TestCase):
-    R = {"spec": SPEC, "date": "2026-12-05", "status": "committed"}
+    """Observations only: nothing about a release is inferred from how long ago something happened."""
+
+    R = {"spec": SPEC, "date": "2026-12-04", "status": "committed"}
 
     def test_released_needs_its_date_and_a_publish_naming_it(self):
-        self.assertEqual(records.release_state(self.R, [], "2026-12-06"), "active")
-        self.assertEqual(records.release_state(self.R, [{"release": SPEC}], "2026-12-06"), "released")
-        self.assertEqual(records.release_state(self.R, [{"release": SPEC}], "2026-12-04"), "active")
+        self.assertEqual(records.release_state(self.R, [], "2026-12-05"), "active")
+        self.assertEqual(records.release_state(self.R, [{"release": SPEC}], "2026-12-05"), "released")
+        self.assertEqual(records.release_state(self.R, [{"release": SPEC}], "2026-12-03"), "active")
 
-    def test_a_held_release_long_past_its_date_counts_as_dropped(self):
+    def test_a_held_release_past_its_date_is_lapsed_never_dropped(self):
         held = {**self.R, "status": "held"}
-        self.assertEqual(records.release_state(held, [], "2026-12-19"), "active")
-        self.assertEqual(records.release_state(held, [], "2026-12-20"), "dropped")
+        self.assertEqual(records.release_state(held, [], "2026-12-04"), "active")
+        self.assertEqual(records.release_state(held, [], "2026-12-05"), "lapsed")
+        # Half a year later it is still the owner's release, waiting for a new date.
+        self.assertEqual(records.release_state(held, [], "2027-06-01"), "lapsed")
         self.assertEqual(records.release_state({**self.R}, [], "2027-02-01"), "active")
 
+    def test_only_the_owners_stop_drops_a_release(self):
+        self.assertEqual(records.release_state({**self.R, "status": "dropped"}, [], "2026-12-01"), "dropped")
 
-class Pitch(unittest.TestCase):
-    """The pitch fields and the 3-week slot (CONTRACT.md, rule 17).
 
-    Why these cases. The slot is the one guarantee that two pitches are never closer than 21 days,
-    and it is easy to get wrong in two quiet ways: comparing instants pushes the slot past the
-    schedule's fire hour, and placing a UTC moment in the wrong day moves it by one.
-    """
+class EveryKindRoundTrips(unittest.TestCase):
+    """Every kind written is readable back. Why: a kind added without its key shape is read as foreign
+    and silently skipped — that is how pitched records once disappeared from their readers."""
 
-    RELEASE = {"spec": SPEC, "date": "2026-12-26", "time": "10:00", "title": "City Alive",
-               "pitch_ok": "true", "status": "committed", "held_at": "2026-11-25T15:00:00Z",
-               "source": "Create Music Release"}
+    SAMPLES = {
+        "profile": {"niche": "music", "audience": "fans", "country": "US", "timezone": "America/New_York"},
+        "pitched": {"album_id": "6UkqasjKwgTtnyekAWQSXU", "title": "City Alive", "status": "pitched",
+                    "pitch_day": "2026-11-23", "release_day": "2026-11-28", "source": "owner"},
+        "pitch_reservation": {"spec": SPEC, "reserved_at": "2026-11-27T10:00:00Z"},
+        "release": {"spec": SPEC, "date": "2027-01-15", "time": "10:00", "title": "Night Bus",
+                    "pitch_ok": "true", "pitch_ok_at": "2026-11-27T10:00:00Z", "status": "held",
+                    "held_at": "2026-11-27T10:00:00Z", "source": "Create Music Release",
+                    "store_release": "local"},
+    }
 
-    def test_a_pitch_over_500_characters_is_refused(self):
-        with self.assertRaises(records.Refusal):
-            records.build("release", {**self.RELEASE, "pitch": "x" * 501})
-        records.build("release", {**self.RELEASE, "pitch": "x" * 500})
+    def test_every_kind_has_a_key_shape(self):
+        self.assertEqual(sorted(records.KINDS), sorted(records.KEY_SHAPES))
 
-    def test_a_pitched_record_is_keyed_by_its_release(self):
-        key, data = records.build("pitched", {
-            "spec": SPEC, "title": "City Alive", "date": "2026-11-28",
-            "album_id": "6UkqasjKwgTtnyekAWQSXU", "status": "pitched",
-            "pitched_at": "2026-11-23T11:19:02Z", "source": "Pitch a Song on Spotify"})
-        self.assertEqual(key, f"pitched:{SPEC}")
-
-    def test_the_slot_opens_on_the_21st_day_by_the_channels_calendar(self):
-        at = ["2026-11-23T11:19:02Z"]
-        closed = records.pitch_slot(at, "America/New_York", "2026-12-13")
-        self.assertEqual((closed["open"], closed["opens_on"]), (False, "2026-12-14"))
-        # The fire at 09:00 UTC on the 21st day comes before the hour of the last pitch: still open.
-        self.assertTrue(records.pitch_slot(at, "America/New_York", "2026-12-14")["open"])
-
-    def test_a_moment_is_placed_in_the_channels_day_not_utcs(self):
-        # 03:00 UTC on the 24th is the evening of the 23rd in New York.
-        slot = records.pitch_slot(["2026-11-24T03:00:00Z"], "America/New_York", "2026-12-14")
-        self.assertEqual(slot["last"], "2026-11-23")
-
-    def test_the_latest_pitch_counts_and_none_means_open(self):
-        slot = records.pitch_slot(["2026-10-26T12:44:12Z", "2026-11-23T11:19:02Z"], "America/New_York", "2026-11-26")
-        self.assertEqual(slot["last"], "2026-11-23")
-        self.assertEqual(records.pitch_slot([], "America/New_York", "2026-11-26"),
-                         {"open": True, "last": None, "opens_on": None})
-
-    def test_the_pitch_date_counts_only_our_rules_and_states_the_listing_as_a_deadline(self):
-        # The slot opens 12-14: the earliest pitch is then, the release 21 days later. Spotify must
-        # list it by 12-14; how long it takes is never estimated.
-        self.assertEqual(records.pitch_date("2026-11-26", "2026-12-14"),
-                         {"earliest": "2027-01-04", "listed_by": "2026-12-14"})
-        self.assertEqual(records.pitch_date("2026-12-20", None),
-                         {"earliest": "2027-01-10", "listed_by": "2026-12-20"})
-        self.assertEqual(records.listed_by_for("2027-01-09"), "2026-12-19")
-
-    def test_the_command_line_answers_the_same(self):
-        code, out = run("pitch-slot", "--at", "2026-11-23T11:19:02Z", "--zone", "America/New_York",
-                        "--today", "2026-12-14")
-        self.assertEqual(code, 0, out)
-        self.assertTrue(out["open"])
-        code, out = run("pitch-slot", "--at", "2026-11-23T11:19:02", "--zone", "America/New_York")
-        self.assertEqual(code, 2, out)
-        code, out = run("pitch-date", "--today", "2026-11-26", "--slot-opens-on", "2026-12-14",
-                        "--release-day", "2026-12-26")
-        self.assertEqual((code, out["earliest"]), (0, "2027-01-04"))
-        self.assertFalse(out["release_day_can_be_pitched"])
+    def test_samples_round_trip_through_validate_stored(self):
+        for name, raw in self.SAMPLES.items():
+            try:
+                key, data = records.build(name, raw)
+            except records.Refusal as e:
+                if name == "profile":
+                    continue  # its required fields live in its own tests
+                raise AssertionError(f"{name}: {e}") from None
+            with self.subTest(kind=name):
+                self.assertEqual(records.validate_stored(key, data), name)
 
 
 if __name__ == "__main__":

@@ -12,11 +12,11 @@ Commands (all print JSON on stdout; a refusal exits 2 with {"ok": false, "error"
   records.py key KIND --field ...     the key alone, for a reader that looks a record up
   records.py check KIND --field ...   validate; print {"key", "data"} without writing
   records.py write KIND --field ...   validate, then upsert through `ai-integration`
-  records.py state --data JSON       active, released or dropped, for a release record
-  records.py pitch-slot --at ISO --zone Z
-                                       may a pitch go out today (21 days after the last one)
-  records.py pitch-date --today D [--slot-opens-on D]
-                                       the earliest release day our rules allow a pitch for
+  records.py state --data JSON       active, lapsed, released or dropped, for a release record
+  records.py consent --data JSON     yes, declined or unanswered: may this release be pitched
+  records.py pitch-plan --today D --lead-days N --releases F [--pitched F] [--open-claims F]
+                        [--reservation JSON] [--publishes F] [--candidate SPEC]
+                                       the reservation, its window, and what to offer a release
   records.py validate --key K --data JSON
                                        check a stored record a reader got back
 
@@ -284,6 +284,12 @@ def _pitch_text(name: str, raw: Any) -> str:
 def _pitch_needs_consent(data: dict[str, Any]) -> None:
     if "pitch" in data and not data["pitch_ok"]:
         raise Refusal("pitch is set but pitch_ok is false: a release the owner did not allow carries no pitch")
+    if data["pitch_ok"] and "pitch_ok_at" not in data:
+        raise Refusal("pitch_ok true needs pitch_ok_at: when the owner said Yes")
+    if not data["pitch_ok"] and "pitch_ok_at" in data:
+        raise Refusal("pitch_ok_at is set but pitch_ok is false: unset it when the consent goes")
+    if data["pitch_ok"] and "pitch_declined_at" in data:
+        raise Refusal("pitch_declined_at is set but pitch_ok is true: unset it when the owner says Yes")
 
 
 KINDS: dict[str, Kind] = {}
@@ -466,14 +472,20 @@ kind(Kind(
     doc="One release a creation recipe with its own cadence is making, keyed by its instance, so the "
         "date is a field and can move. held = date chosen, nothing external done; committed = the "
         "first external act (a scheduled upload, a distributor submit) is about to happen or happened; "
-        "dropped = abandoned. Released is not stored: see `records.py state` (CONTRACT.md, rule 17).",
+        "dropped = the owner stopped it. Released and lapsed are not stored: see `records.py state`. "
+        "Whether it may be pitched: `records.py consent` (CONTRACT.md, rule 17).",
     fields={
         "spec": req(_uuid, "the release's instance (Spec id); the key is release:<spec>"),
         "date": req(_date, "the release day, in profile:channel's timezone"),
         "time": req(_hhmm, "the release hour, local HH:MM in profile:channel's timezone"),
         "title": req(_text, "the song's title (not the YouTube title)"),
         "pitch_ok": req(_bool, "true when the owner allows this release to be pitched to Spotify editorial"),
+        "pitch_ok_at": opt(_datetime, "when the owner said Yes; set together with pitch_ok true"),
+        "pitch_declined_at": opt(_datetime, "when the owner said No to a pitch; set with pitch_ok false"),
         "pitch": opt(_pitch_text, "the owner-approved Spotify pitch description, at most 500 characters"),
+        "store_release": opt(_enum("local", "worldwide"),
+                             "the distributor's release-time choice: midnight local in each market, or one "
+                             "moment worldwide; written at the submit"),
         "status": req(_enum("held", "committed", "dropped"), "held, committed or dropped"),
         "held_at": req(_datetime, "when the date was first chosen"),
         "source": req(_text, "the recipe that makes it"),
@@ -487,26 +499,51 @@ kind(Kind(
     checks=(_pitch_needs_consent,),
 ))
 
+ALBUM_ID = re.compile(r"^[A-Za-z0-9]{22}$")
+
+
+def _pitched_names_its_release(data: dict[str, Any]) -> None:
+    if "spec" not in data and "release_day" not in data:
+        raise Refusal("a pitched record without spec needs release_day: the day Spotify shows")
+
+
 kind(Kind(
     name="pitched",
-    key_doc="pitched:<the release's Spec id>",
+    key_doc="pitched:<Spotify album id>",
     writer="Pitch a Song on Spotify",
-    readers="Pitch a Song on Spotify, Create Music Release",
-    doc="A release pitched to Spotify editorial, keyed by its release instance: once per release. "
-        "unknown = the pitch was submitted and Spotify did not show whether it went through; it "
-        "counts as a pitch for the 3-week slot until Spotify shows it either way (`records.py "
-        "pitch-slot`).",
+    readers="Pitch a Song on Spotify, Create Music Release, Analytics",
+    doc="A release pitched to Spotify editorial, keyed by its Spotify album id: once per album. spec "
+        "names our release when it is one (absent for a song the owner pitched by hand outside the "
+        "recipes). unknown = submitted and Spotify did not show whether it went through; it counts as a "
+        "pitch (`records.py pitch-plan`).",
     fields={
-        "spec": req(_uuid, "the release's instance (Spec id); the key is pitched:<spec>"),
-        "title": req(_text, "the song's title, as in its release record"),
-        "date": req(_date, "the release day the pitch was made for, in profile:channel's timezone"),
-        "album_id": req(_match(re.compile(r"^[A-Za-z0-9]{22}$"), "a Spotify album id (22 letters and digits)"),
-                        "the Spotify album id of the release"),
+        "album_id": req(_match(ALBUM_ID, "a Spotify album id (22 letters and digits)"),
+                        "the Spotify album id; the key is pitched:<album_id>"),
+        "spec": opt(_uuid, "our release's instance (Spec id), when the album is one of ours"),
+        "title": req(_text, "the song's title"),
         "status": req(_enum("pitched", "unknown"), "pitched, or unknown when the outcome was not shown"),
-        "pitched_at": req(_datetime, "when the pitch was submitted"),
-        "source": req(_text, "the recipe that pitched it, or the owner by hand"),
+        "pitch_day": req(_date, "the day of the pitch in profile:channel's timezone; for a pitch found "
+                                "later, the day it was first observed"),
+        "release_day": opt(_date, "the release day Spotify shows; used only when spec is absent"),
+        "source": req(_text, "the recipe that pitched it, or owner for a pitch made by hand"),
     },
-    make_key=lambda d: f"pitched:{d['spec']}",
+    make_key=lambda d: f"pitched:{d['album_id']}",
+    checks=(_pitched_names_its_release,),
+))
+
+kind(Kind(
+    name="pitch_reservation",
+    key_doc="pitch_reservation:channel",
+    writer="Create Music Release",
+    readers="Pitch a Song on Spotify, Create Music Release",
+    doc="The one release waiting for a pitch (one per project). Taken with a single conditional write "
+        "and no retry: write --if-absent, or --if-updated-at the updatedAt read when it is free. Free or "
+        "live is computed, never stored (`records.py pitch-plan`).",
+    fields={
+        "spec": req(_uuid, "the reserved release's instance (Spec id)"),
+        "reserved_at": req(_datetime, "when it was reserved"),
+    },
+    make_key=lambda d: "pitch_reservation:channel",
 ))
 
 kind(Kind(
@@ -523,8 +560,9 @@ kind(Kind(
         "title": req(_text, "the planned title"),
         "format": req(FORMAT, "long, short, live or post"),
         "status": req(_enum("planned", "in-progress", "published", "dropped"),
-                      "where it stands; in-progress is reserved (no recipe of the set writes it). A slot "
-                      "with no publish 14 days after its date is dropped; a later publish moves it to "
+                      "where it stands; in-progress is reserved (no recipe of the set writes it). A "
+                      "slot whose date passed with no publish is reported as missed by date (an "
+                      "observation, not stored); dropped only by the owner; a later publish moves it to "
                       "published"),
         "idea": opt(_slug, "the idea's slug, when it comes from one"),
         "source": req(_text, "planning"),
@@ -671,6 +709,8 @@ KEY_SHAPES = {
     "take": re.compile(rf"^take:{_S}$"),
     "release": re.compile(r"^release:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"),
     "mix": re.compile(r"^mix:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"),
+    "pitched": re.compile(r"^pitched:[A-Za-z0-9]{22}$"),
+    "pitch_reservation": re.compile(r"^pitch_reservation:channel$"),
     "replied": re.compile(rf"^replied:{_C}:(reply|pin|heart|hide|report)$"),
 }
 
@@ -821,7 +861,7 @@ def get_record(key: str, ids: dict[str, str], project_id: str) -> dict[str, Any]
 
 
 def update(key: str, sets: list[str], appends: list[str], ids: dict[str, str], project_id: str,
-           spec_task_id: str | None) -> dict[str, Any]:
+           spec_task_id: str | None, unsets: list[str] | None = None) -> dict[str, Any]:
     """Read, merge, write only if nobody changed it meanwhile; one retry, then refuse."""
     kind_name = key.split(":", 1)[0]
     if kind_name not in KINDS:
@@ -836,6 +876,10 @@ def update(key: str, sets: list[str], appends: list[str], ids: dict[str, str], p
             if not sep:
                 raise Refusal(f"--set takes field=value, got {item!r}")
             data[field.strip()] = value
+        for field in unsets or []:
+            if KINDS[kind_name].fields.get(field.strip(), Field(_text, False, "")).required:
+                raise Refusal(f"{field} is required in {kind_name}: it can be changed, not unset")
+            data.pop(field.strip(), None)
         for item in appends:
             field, sep, value = item.partition("=")
             if not sep:
@@ -855,67 +899,172 @@ def update(key: str, sets: list[str], appends: list[str], ids: dict[str, str], p
 
 
 def release_state(release: dict[str, Any], publishes: list[dict[str, Any]], today: str) -> str:
-    """active, released or dropped — the contract's rule, in one place (CONTRACT.md, rule 17)."""
+    """active, lapsed, released or dropped — observations only (CONTRACT.md, rule 17).
+
+    lapsed = held and its date has passed: a fact, not a guess that the owner gave up. Only the owner's
+    stop drops a release; nothing is inferred from elapsed time.
+    """
     status = release.get("status")
     if status == "dropped":
         return "dropped"
     day = date.fromisoformat(release["date"])
     now = date.fromisoformat(today)
-    if status == "held" and (now - day).days > 14:
-        return "dropped"
+    if status == "held" and day < now:
+        return "lapsed"
     spec = release.get("spec")
     if status == "committed" and day <= now and any(p.get("release") == spec for p in publishes):
         return "released"
     return "active"
 
 
+def consent(release: dict[str, Any]) -> str:
+    """yes, declined or unanswered — whether the owner allowed this release to be pitched."""
+    if release.get("pitch_ok") in (True, "true"):
+        return "yes"
+    if release.get("pitch_declined_at"):
+        return "declined"
+    return "unanswered"
+
+
 PITCH_GAP_DAYS = 21
 # A pitch goes out at least this many days before release, or not at all (the owner's rule).
 PITCH_LEAD_DAYS = 21
+# A proposed window is at least this long, so every weekday is in it whatever the schedule's days.
+PITCH_MIN_WINDOW_DAYS = 7
+# The release grid: music's global release day (IFPI) and the day Spotify's Release Radar refreshes.
+RELEASE_WEEKDAY = 4  # Friday
 
 
-def pitch_slot(pitched_at: list[str], zone: str, today: str, gap: int = PITCH_GAP_DAYS) -> dict[str, Any]:
-    """Whether a pitch may go out today: never within `gap` days of the last one (rule 17).
+def _day(raw: str) -> date:
+    return date.fromisoformat(raw)
 
-    Days, not instants, in profile:channel's timezone: the schedule fires at a fixed hour, and an
-    instant 21 × 24 h after a pitch made later in the day would push the slot to the next fire.
-    `pitched_at` holds every pitch that may have happened — submitted, or claimed with no known
-    outcome — because a pitch that went out unseen still spends the slot.
+
+def _plus(d: date, days: int) -> date:
+    return date.fromordinal(d.toordinal() + days)
+
+
+def _release_day_of(spec: str | None, fallback: str | None, releases: dict[str, dict[str, Any]]) -> date | None:
+    # Our release's current date carries every move; Spotify's day is used only for a hand pitch.
+    if spec and spec in releases:
+        return _day(releases[spec]["date"])
+    return _day(fallback) if fallback else None
+
+
+def pitch_plan(
+    *,
+    today: str,
+    lead_days: int,
+    pitched: list[dict[str, Any]],
+    open_claims: list[dict[str, Any]],
+    reservation: dict[str, Any] | None,
+    releases: list[dict[str, Any]],
+    publishes: list[dict[str, Any]] | None = None,
+    candidate: str | None = None,
+) -> dict[str, Any]:
+    """The pitch plan: one computation for what Create Music Release promises and what Pitch does.
+
+    Only our own rules are computed (CONTRACT.md, rule 17): pitches at least PITCH_GAP_DAYS apart, a
+    pitch at least PITCH_LEAD_DAYS before release, Spotify's one pitch at a time, one reservation. No
+    platform or owner timing is assumed: the outputs are windows and conditions.
+
+    `open_claims` are Pitch's slot claims still claimed (in flight or stale): each counts as a pitch on
+    its claim day of the reserved release until it is resolved.
     """
-    from zoneinfo import ZoneInfo
-    tz = ZoneInfo(_zone("zone", zone))
-    now = date.fromisoformat(today)
-    days = [_parse_instant(a).astimezone(tz).date() for a in pitched_at]
-    if not days:
-        return {"open": True, "last": None, "opens_on": None}
-    last = max(days)
-    opens = date.fromordinal(last.toordinal() + gap)
-    return {"open": now >= opens, "last": last.isoformat(), "opens_on": opens.isoformat()}
+    now = _day(today)
+    publishes = publishes or []
+    by_spec = {r["spec"]: r for r in releases}
 
+    # Every pitch that may have happened: its day and its release day.
+    events: list[tuple[date, date | None]] = []
+    for p in pitched:
+        events.append((_day(p["pitch_day"]), _release_day_of(p.get("spec"), p.get("release_day"), by_spec)))
+    reserved = by_spec.get(reservation["spec"]) if reservation else None
+    for c in open_claims:
+        events.append((_day(c["claim_day"]), _day(reserved["date"]) if reserved else None))
 
-def pitch_date(today: str, slot_opens_on: str | None) -> dict[str, str]:
-    """The earliest release day our own rules allow a pitch for, and the day Spotify must list it by.
+    slot_opens: date | None = None
+    for pitch_day, release_day in events:
+        # The next pitch needs both: PITCH_GAP_DAYS after this one, and this song out (one at a time).
+        opens = max(_plus(pitch_day, PITCH_GAP_DAYS), release_day or pitch_day)
+        slot_opens = opens if slot_opens is None or opens > slot_opens else slot_opens
+    start = slot_opens or now
 
-    Only the deterministic rules are computed: the slot and the lead. How long the distributor and
-    Spotify take is not predicted — it changes without notice — so it is stated as a deadline
-    (`listed_by` = release day − PITCH_LEAD_DAYS) and observed by the pitching recipe, never
-    estimated. `listed_by_for(<chosen day>)` gives the deadline for any later day the owner picks.
-    """
-    now = date.fromisoformat(today)
-    pitch = max(now, date.fromisoformat(slot_opens_on)) if slot_opens_on else now
-    earliest = date.fromordinal(pitch.toordinal() + PITCH_LEAD_DAYS)
-    return {"earliest": earliest.isoformat(), "listed_by": pitch.isoformat()}
+    def window(release_day: date) -> dict[str, Any]:
+        # Shown as [slot opens, release − lead]: it moves only when a pitch is made or observed, or the
+        # date moves. Today only shortens what is left of it.
+        last = _plus(release_day, -PITCH_LEAD_DAYS)
+        left_from = max(start, now)
+        return {"from": start.isoformat(), "to": last.isoformat(),
+                "days": max((last - start).days + 1, 0),
+                "days_left": max((last - left_from).days + 1, 0),
+                "open_today": start <= now <= last}
 
+    pitched_specs = {p.get("spec") for p in pitched if p.get("spec")}
 
-def listed_by_for(release_day: str) -> str:
-    """The last day Spotify may list a release for it still to be pitched (PITCH_LEAD_DAYS before)."""
-    day = date.fromisoformat(release_day)
-    return date.fromordinal(day.toordinal() - PITCH_LEAD_DAYS).isoformat()
+    def reservation_state() -> dict[str, Any]:
+        if not reservation:
+            return {"state": "free", "why": "none"}
+        spec = reservation["spec"]
+        rel = by_spec.get(spec)
+        if rel is None:
+            return {"state": "free", "why": "its release record is gone", "spec": spec}
+        if release_state(rel, publishes, today) == "dropped":
+            return {"state": "free", "why": "its release was dropped", "spec": spec}
+        if consent(rel) != "yes":
+            return {"state": "free", "why": "the owner withdrew the consent", "spec": spec}
+        if spec in pitched_specs:
+            return {"state": "free", "why": "it was pitched", "spec": spec}
+        w = window(_day(rel["date"]))
+        if now > _day(w["to"]) and not open_claims:
+            return {"state": "free", "why": "its window passed without a pitch (missed)", "spec": spec,
+                    "window": w}
+        return {"state": "live", "spec": spec, "window": w}
 
+    def first_free_release_day(at_least: date, exclude: str | None) -> date:
+        taken = {
+            _day(r["date"]) for r in releases
+            if r["spec"] != exclude and release_state(r, publishes, today) == "active"
+        }
+        d = at_least
+        while d.weekday() != RELEASE_WEEKDAY or d in taken:
+            d = _plus(d, 1)
+        return d
 
-def _parse_instant(raw: str) -> datetime:
-    # _datetime refuses a moment without a zone: it could not be placed in the channel's day.
-    return datetime.fromisoformat(_datetime("pitched_at", raw))
+    out: dict[str, Any] = {
+        "today": today,
+        "slot_opens": start.isoformat(),
+        "reservation": reservation_state(),
+        "rules": {"gap_days": PITCH_GAP_DAYS, "lead_days": PITCH_LEAD_DAYS,
+                  "min_window_days": PITCH_MIN_WINDOW_DAYS, "release_weekday": "Friday"},
+    }
+    if candidate:
+        rel = by_spec.get(candidate)
+        if rel is None:
+            raise Refusal(f"candidate {candidate} is not among the releases given")
+        res = out["reservation"]
+        no_day = first_free_release_day(_plus(now, lead_days), candidate)
+        offer: dict[str, Any] = {"spec": candidate, "consent": consent(rel), "no_date": no_day.isoformat()}
+        own = window(_day(rel["date"]))
+        if res["state"] == "live" and res["spec"] != candidate:
+            offer.update(can_offer=False, why="the reservation is taken", taken_by=res["spec"])
+        elif candidate in pitched_specs:
+            offer.update(can_offer=False, why="already pitched")
+        elif rel["status"] == "committed":
+            # A committed release keeps its date: only its own window is shown.
+            left = own["days_left"]
+            offer.update(can_offer=left > 0, yes_date=rel["date"], window=own,
+                         short=0 < left < PITCH_MIN_WINDOW_DAYS,
+                         why=None if left > 0 else "its date leaves no window")
+        else:
+            least = max(_plus(now, lead_days),
+                        _plus(max(start, now), PITCH_LEAD_DAYS + PITCH_MIN_WINDOW_DAYS - 1))
+            if _day(rel["date"]) >= least and own["days_left"] >= PITCH_MIN_WINDOW_DAYS:
+                yes_day = _day(rel["date"])
+            else:
+                yes_day = first_free_release_day(least, candidate)
+            offer.update(can_offer=True, yes_date=yes_day.isoformat(), window=window(yes_day))
+        out["offer"] = offer
+    return out
 
 
 # ── command line ───────────────────────────────────────────────────────────────────────────────
@@ -954,25 +1103,29 @@ def parser() -> argparse.ArgumentParser:
     up = sub.add_parser("update", help="change fields of a stored record, only if nobody changed it meanwhile")
     up.add_argument("--key", required=True)
     up.add_argument("--set", action="append", default=[], metavar="FIELD=VALUE")
+    up.add_argument("--unset", action="append", default=[], metavar="FIELD",
+                    help="remove an optional field (e.g. pitch)")
     up.add_argument("--append", action="append", default=[], metavar="FIELD=VALUE",
                     help="add one item to a list field (e.g. moves=2026-11-28>2026-12-05)")
     up.add_argument("--spec-template-id", help="this run's Process id")
     up.add_argument("--spec-id", help="this run's Spec id")
     up.add_argument("--project-id", help="this run's Project id")
     up.add_argument("--spec-task-id", help="this run's step, when known")
-    st = sub.add_parser("state", help="active, released or dropped, for a release record")
+    st = sub.add_parser("state", help="active, lapsed, released or dropped, for a release record")
     st.add_argument("--data", required=True, help="the release record's data as JSON")
     st.add_argument("--publishes", help="a JSON file: the publish records' data (a list)")
     st.add_argument("--today", help="YYYY-MM-DD in profile:channel's timezone (default: today, UTC)")
-    ps = sub.add_parser("pitch-slot", help="may a pitch go out today: 21 days after the last one")
-    ps.add_argument("--at", action="append", default=[], metavar="ISO",
-                    help="when a pitch was submitted or claimed with no known outcome; repeat")
-    ps.add_argument("--zone", required=True, help="profile:channel's timezone")
-    ps.add_argument("--today", help="YYYY-MM-DD in that timezone (default: today there)")
-    pd = sub.add_parser("pitch-date", help="the earliest release day our rules allow a pitch for")
-    pd.add_argument("--today", required=True, help="YYYY-MM-DD in profile:channel's timezone")
-    pd.add_argument("--slot-opens-on", help="pitch-slot's opens_on, when the slot is not open yet")
-    pd.add_argument("--release-day", help="a day the owner chose: also give its listing deadline")
+    pp = sub.add_parser("pitch-plan", help="the pitch plan: reservation, windows, and an offer")
+    pp.add_argument("--today", required=True, help="YYYY-MM-DD in profile:channel's timezone")
+    pp.add_argument("--lead-days", type=int, required=True, help="MUSIC_RELEASE_LEAD_DAYS")
+    pp.add_argument("--pitched", help="a JSON file: Pitch's pitched records' data (a list)")
+    pp.add_argument("--open-claims", help="a JSON file: [{\"claim_day\": D}] for slot claims still claimed")
+    pp.add_argument("--reservation", help="the pitch_reservation record's data as JSON (absent: none)")
+    pp.add_argument("--releases", required=True, help="a JSON file: the release records' data (a list)")
+    pp.add_argument("--publishes", help="a JSON file: the publish records' data (a list)")
+    pp.add_argument("--candidate", help="a release's Spec id: what to offer it")
+    cs = sub.add_parser("consent", help="yes, declined or unanswered, for a release record")
+    cs.add_argument("--data", required=True, help="the release record's data as JSON")
     vp = sub.add_parser("validate", help="check a stored record")
     vp.add_argument("--key", required=True)
     vp.add_argument("--data", required=True, help="the record's data as JSON")
@@ -1007,19 +1160,32 @@ def main(argv: list[str] | None = None) -> int:
                     project_id = None
             if not project_id:
                 raise Refusal("update needs --project-id (or the Project id line in current-task.md)")
-            out = update(args.key, args.set, args.append, ids, project_id, args.spec_task_id)
-        elif args.command == "pitch-slot":
-            from zoneinfo import ZoneInfo
-            today = args.today or datetime.now(ZoneInfo(_zone("zone", args.zone))).date().isoformat()
-            out = {"ok": True, **pitch_slot(args.at, args.zone, _date("today", today))}
-        elif args.command == "pitch-date":
-            slot = _date("slot-opens-on", args.slot_opens_on) if args.slot_opens_on else None
-            out = {"ok": True, **pitch_date(_date("today", args.today), slot), "lead_days": PITCH_LEAD_DAYS}
-            if args.release_day:
-                chosen = _date("release-day", args.release_day)
-                out["release_day"] = chosen
-                out["release_day_listed_by"] = listed_by_for(chosen)
-                out["release_day_can_be_pitched"] = chosen >= out["earliest"]
+            out = update(args.key, args.set, args.append, ids, project_id, args.spec_task_id, args.unset)
+        elif args.command == "pitch-plan":
+            def load(path: str | None) -> list[Any]:
+                if not path:
+                    return []
+                try:
+                    value = json.load(open(path, encoding="utf-8"))
+                except (OSError, json.JSONDecodeError) as e:
+                    raise Refusal(f"cannot read {path}: {e}") from None
+                if not isinstance(value, list):
+                    raise Refusal(f"{path} must hold a JSON list")
+                return value
+            try:
+                reservation = json.loads(args.reservation) if args.reservation else None
+            except json.JSONDecodeError as e:
+                raise Refusal(f"--reservation is not JSON: {e}") from None
+            out = {"ok": True, **pitch_plan(
+                today=_date("today", args.today), lead_days=args.lead_days, pitched=load(args.pitched),
+                open_claims=load(args.open_claims), reservation=reservation, releases=load(args.releases),
+                publishes=load(args.publishes), candidate=args.candidate)}
+        elif args.command == "consent":
+            try:
+                rel = json.loads(args.data)
+            except json.JSONDecodeError as e:
+                raise Refusal(f"--data is not JSON: {e}") from None
+            out = {"ok": True, "consent": consent(rel)}
         elif args.command == "state":
             try:
                 rel = json.loads(args.data)

@@ -192,11 +192,10 @@ New in this repository; written for channels whose videos are an artist's music.
 - **Releases have their own cadence** (CONTRACT.md, rule 17): the creation recipe that makes them
   ("Create Music Release") owns their dates; `format-plan.md` lists (new, long) and the Shorts cut
   from a release as its pairs, with no stand-alone Short slots for Planning unless the owner wants
-  some. Pitching to Spotify editorial: the owner allows releases one by one
-  (`pitch_ok`); one pitched release at a time, the pitch at least 21 days before release or not at
-  all (Spotify's own floor is 7 days, for Release Radar), and pitches never closer than 21 days
-  (`records.py pitch-slot`, `pitch-date`); the
-  recipe's settings hold the release rhythm (interval, lead).
+  some. Releases come out on Fridays. Pitching to Spotify editorial: one release waits for a pitch
+  at a time, the owner allows it, the pitch goes at least 21 days before release or not at all
+  (Spotify's own floor is 7 days, for Release Radar), and pitches are never closer than 21 days
+  (`records.py pitch-plan`); the recipe's settings hold the release lead and time.
 - **Between releases**: YouTube's artist playbook — a trailer about two weeks before, Shorts with the
   official audio, the music video as their related video, a release playlist, fan Shorts featured
   after release (artists.youtube resources). YouTube publishes no release cadence number.
