@@ -12,6 +12,9 @@ Commands (all print JSON on stdout; a refusal exits 2 with {"ok": false, "error"
   records.py key KIND --field ...     the key alone, for a reader that looks a record up
   records.py check KIND --field ...   validate; print {"key", "data"} without writing
   records.py write KIND --field ...   validate, then upsert through `ai-integration`
+  records.py state --data JSON       active, released or dropped, for a release record
+  records.py pitch-slot --at ISO --zone Z
+                                       may a pitch go out today (21 days after the last one)
   records.py validate --key K --data JSON
                                        check a stored record a reader got back
 
@@ -269,6 +272,18 @@ def _replied_reply_has_text(data: dict[str, Any]) -> None:
         raise Refusal("action=reply needs reply_id — the id YouTube gave the reply")
 
 
+def _pitch_text(name: str, raw: Any) -> str:
+    text = _text(name, raw)
+    if len(text) > 500:
+        raise Refusal(f"{name} is {len(text)} characters; Spotify takes at most 500")
+    return text
+
+
+def _pitch_needs_consent(data: dict[str, Any]) -> None:
+    if "pitch" in data and not data["pitch_ok"]:
+        raise Refusal("pitch is set but pitch_ok is false: a release the owner did not allow carries no pitch")
+
+
 KINDS: dict[str, Kind] = {}
 
 
@@ -455,7 +470,8 @@ kind(Kind(
         "date": req(_date, "the release day, in profile:channel's timezone"),
         "time": req(_hhmm, "the release hour, local HH:MM in profile:channel's timezone"),
         "title": req(_text, "the song's title (not the YouTube title)"),
-        "focus": req(_bool, "true for the release the channel promotes hardest (pitched)"),
+        "pitch_ok": req(_bool, "true when the owner allows this release to be pitched to Spotify editorial"),
+        "pitch": opt(_pitch_text, "the owner-approved Spotify pitch description, at most 500 characters"),
         "status": req(_enum("held", "committed", "dropped"), "held, committed or dropped"),
         "held_at": req(_datetime, "when the date was first chosen"),
         "source": req(_text, "the recipe that makes it"),
@@ -466,6 +482,29 @@ kind(Kind(
         "note": opt(_text, "why it was dropped, or anything the next reader needs"),
     },
     make_key=lambda d: f"release:{d['spec']}",
+    checks=(_pitch_needs_consent,),
+))
+
+kind(Kind(
+    name="pitched",
+    key_doc="pitched:<the release's Spec id>",
+    writer="Pitch a Song on Spotify",
+    readers="Pitch a Song on Spotify, Create Music Release",
+    doc="A release pitched to Spotify editorial, keyed by its release instance: once per release. "
+        "unknown = the pitch was submitted and Spotify did not show whether it went through; it "
+        "counts as a pitch for the 3-week slot until Spotify shows it either way (`records.py "
+        "pitch-slot`).",
+    fields={
+        "spec": req(_uuid, "the release's instance (Spec id); the key is pitched:<spec>"),
+        "title": req(_text, "the song's title, as in its release record"),
+        "date": req(_date, "the release day the pitch was made for, in profile:channel's timezone"),
+        "album_id": req(_match(re.compile(r"^[A-Za-z0-9]{22}$"), "a Spotify album id (22 letters and digits)"),
+                        "the Spotify album id of the release"),
+        "status": req(_enum("pitched", "unknown"), "pitched, or unknown when the outcome was not shown"),
+        "pitched_at": req(_datetime, "when the pitch was submitted"),
+        "source": req(_text, "the recipe that pitched it, or the owner by hand"),
+    },
+    make_key=lambda d: f"pitched:{d['spec']}",
 ))
 
 kind(Kind(
@@ -828,6 +867,33 @@ def release_state(release: dict[str, Any], publishes: list[dict[str, Any]], toda
     return "active"
 
 
+PITCH_GAP_DAYS = 21
+
+
+def pitch_slot(pitched_at: list[str], zone: str, today: str, gap: int = PITCH_GAP_DAYS) -> dict[str, Any]:
+    """Whether a pitch may go out today: never within `gap` days of the last one (rule 17).
+
+    Days, not instants, in profile:channel's timezone: the schedule fires at a fixed hour, and an
+    instant 21 × 24 h after a pitch made later in the day would push the slot to the next fire.
+    `pitched_at` holds every pitch that may have happened — submitted, or claimed with no known
+    outcome — because a pitch that went out unseen still spends the slot.
+    """
+    from zoneinfo import ZoneInfo
+    tz = ZoneInfo(_zone("zone", zone))
+    now = date.fromisoformat(today)
+    days = [_parse_instant(a).astimezone(tz).date() for a in pitched_at]
+    if not days:
+        return {"open": True, "last": None, "opens_on": None}
+    last = max(days)
+    opens = date.fromordinal(last.toordinal() + gap)
+    return {"open": now >= opens, "last": last.isoformat(), "opens_on": opens.isoformat()}
+
+
+def _parse_instant(raw: str) -> datetime:
+    # _datetime refuses a moment without a zone: it could not be placed in the channel's day.
+    return datetime.fromisoformat(_datetime("pitched_at", raw))
+
+
 # ── command line ───────────────────────────────────────────────────────────────────────────────
 
 
@@ -874,6 +940,11 @@ def parser() -> argparse.ArgumentParser:
     st.add_argument("--data", required=True, help="the release record's data as JSON")
     st.add_argument("--publishes", help="a JSON file: the publish records' data (a list)")
     st.add_argument("--today", help="YYYY-MM-DD in profile:channel's timezone (default: today, UTC)")
+    ps = sub.add_parser("pitch-slot", help="may a pitch go out today: 21 days after the last one")
+    ps.add_argument("--at", action="append", default=[], metavar="ISO",
+                    help="when a pitch was submitted or claimed with no known outcome; repeat")
+    ps.add_argument("--zone", required=True, help="profile:channel's timezone")
+    ps.add_argument("--today", help="YYYY-MM-DD in that timezone (default: today there)")
     vp = sub.add_parser("validate", help="check a stored record")
     vp.add_argument("--key", required=True)
     vp.add_argument("--data", required=True, help="the record's data as JSON")
@@ -909,6 +980,10 @@ def main(argv: list[str] | None = None) -> int:
             if not project_id:
                 raise Refusal("update needs --project-id (or the Project id line in current-task.md)")
             out = update(args.key, args.set, args.append, ids, project_id, args.spec_task_id)
+        elif args.command == "pitch-slot":
+            from zoneinfo import ZoneInfo
+            today = args.today or datetime.now(ZoneInfo(_zone("zone", args.zone))).date().isoformat()
+            out = {"ok": True, **pitch_slot(args.at, args.zone, _date("today", today))}
         elif args.command == "state":
             try:
                 rel = json.loads(args.data)

@@ -272,8 +272,8 @@ releases and their dates; Planning does not plan them.
   plans no slot for an owned pair. Everything else (mixes, performances, stand-alone videos) stays
   Planning's.
 - **One record per release.** `release:<Spec id>` (`records.py schema release`): date, time (local
-  HH:MM in `profile:channel`'s `timezone`), title (the song, not the YouTube title), focus, idea,
-  status `held | committed | dropped`, `submitted_at`, `video_id`, `moves`. The date is a field, so
+  HH:MM in `profile:channel`'s `timezone`), title (the song, not the YouTube title), `pitch_ok`,
+  `pitch`, idea, status `held | committed | dropped`, `submitted_at`, `video_id`, `moves`. The date is a field, so
   it can move; the key is the instance.
 - **Writing it.** The first write is `records.py write release … --if-absent`; every later change is
   `records.py update --key release:<Spec id> …`, which writes only if nobody changed it meanwhile
@@ -283,7 +283,7 @@ releases and their dates; Planning does not plan them.
   it reads and uses that one. This is the one rule for every release, including one synced onto a
   new revision half-way.
 - **The date.** A release's date is occupied while it is active. The owner confirms date, time and
-  focus once, where the recipe asks for it; on confirm the recipe re-reads the channel's active
+  whether the release may be pitched once, where the recipe asks for it; on confirm the recipe re-reads the channel's active
   releases and asks again if the date was taken meanwhile.
 - **Committed.** The first external act — a scheduled upload, a distributor submit — sets
   `committed` before it happens. A held release may move freely; a committed one moves only by the
@@ -293,6 +293,15 @@ releases and their dates; Planning does not plan them.
   `publish` naming the release) or `dropped` (status dropped, or held more than 14 days past its
   date — a committed release never drops on its own). A dropped release frees its date; its take
   counts as dropped.
+- **Pitching.** The owner decides which releases may be pitched to Spotify editorial: `pitch_ok`,
+  asked with the date, silence = no — a pitch is irreversible, and silence never opts into one. Any
+  number of releases may be allowed. The pitch description is approved by the owner in the creation
+  recipe and stored as `pitch` before the distributor submit; a release without it is not pitched,
+  and nothing drafts one in its place. "Pitch a Song on Spotify" reads release records and never
+  writes them; it keeps its own `pitched:<release Spec id>`. Pitches are never closer than 21 days:
+  `records.py pitch-slot` over every pitch that may have happened (submitted, or claimed with no
+  known outcome), in days of `profile:channel`'s timezone, per project. The slot limits pitches, not
+  releases, which may come as often as the recipe makes them.
 - **Planning** reads the releases of every declared creation recipe, treats active ones as occupied
   dates, plans nothing of its own on such a date unless the owner says so, and shows them as fixed
   rows in its calendar.
