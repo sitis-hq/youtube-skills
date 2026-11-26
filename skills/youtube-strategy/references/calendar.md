@@ -12,9 +12,10 @@ percentages are dropped (thresholds.md); the 3-title rule stays.
 - This recipe's earlier `plan` records and the creation recipes' `publish` records — to close
   published slots and not plan an idea twice.
 - Seasonal dates: owner-provided events and release dates, holidays in the audience's country.
-- When the audience is online: Studio's "When your viewers are on YouTube" if a step exported it;
-  otherwise the channel's past best publish hours from its own uploads; otherwise state the
-  assumption.
+- The publish hour: the project's setting (`YOUTUBE_PUBLISH_TIME`; a creation recipe's own, e.g.
+  `MUSIC_RELEASE_TIME`). It is not a growth lever — publish time does not affect a video's long-term
+  performance except Live and Premieres (Help 141805; thresholds.md "Never recommended") — so no
+  "best hour" is measured or recommended.
 
 ## Steps
 
@@ -43,7 +44,7 @@ percentages are dropped (thresholds.md); the 3-title rule stays.
 ```
 ## [Month YYYY]
 Slots: [n] long-form + [n] Shorts + … · Hero: … · Key dates: … (with lead times)
-Audience hours: [source or stated assumption]
+Publish hour: [the setting used]
 
 | Week | Mon | Tue | Wed | Thu | Fri | Sat | Sun |   (LF = long-form, SH = Short, LV = live)
 
