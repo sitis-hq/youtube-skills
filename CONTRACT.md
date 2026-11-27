@@ -156,7 +156,8 @@ is not signed in to.
 
 Prepare banner, avatar and channel copy, then send them to the owner with `send-message`. The
 message carries the images or the text, with buttons. Then wait for the answer with `await-reply`.
-Apply them only after the owner approves.
+Apply them only after the owner approves. The asking happens only in a run a person started
+(rule 18).
 
 ### 10. Validators
 
@@ -314,3 +315,26 @@ releases and their dates; Planning does not plan them.
 - **Planning** reads the releases of every declared creation recipe, treats active ones as occupied
   dates, plans nothing of its own on such a date unless the owner says so, and shows them as fixed
   rows in its calendar.
+
+### 18. A scheduled run asks nothing
+
+A step reads the "Started by" line of `current-task.md`. Nobody is at the chat of a run a schedule
+started, so the owner's decisions live in **owner steps**, and every recipe of the set that asks the
+owner keeps one shape:
+
+- **On a schedule** the owner step never asks and never waits (no `await-reply`; silence is never an
+  answer). It records the pending package as its artifacts (a file the person run reads), posts it in
+  its chat as a readable summary ending with the line that only Run on this step records a decision
+  and a reply in this chat does not, sends one notice per pending episode (`notify --intent-key
+  notice:<case>:<Project id>:<episode>` with an `open-chat` button to the step's chat — the episode,
+  never the day, is in the key), and passes. The steps after it act only on recorded decisions and
+  pass when there are none.
+- **The owner decides with Run on the owner step.** That run presents the package with its buttons
+  first (the generic "what would you like to change?" of a manual Run does not apply), re-checks the
+  live state before asking, refuses a package a newer one has replaced, and waits with `await-reply
+  --timeout 600`. On silence it records nothing, the package stays pending, and no second notice is
+  sent. Its pass re-runs the steps that act on the decision.
+- A pending item leaves its package only by the owner's decision or by an observation, never because
+  time has passed. A message in an owner step's chat after the step has passed is not a decision.
+- A recipe shows the owner conditions, never a forecast of a platform's timing, a scheduled fire's
+  timing or the owner's pace.
